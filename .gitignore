@@ -1,0 +1,46 @@
+```
+# Build directories
+build/
+cmake-build*/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+Makefile
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Dependencies downloaded by CMake
+_deps/
+
+# Compiled binaries
+*.a
+*.so
+*.dylib
+*.exe
+*.dll
+*.out
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Temporary files
+*.tmp
+```
