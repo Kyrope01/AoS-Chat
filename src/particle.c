@@ -58,8 +58,12 @@ static bool particle_update_single(void* obj, void* user) {
 	} else {
 		float acc_y = -32.0F * dt;
 
-		if(p->type != 254 && map_isair(p->x, p->y + acc_y * dt - p->size / 2.0F, p->z) && !p->y + acc_y * dt < 0.0F) {
-			p->vy += acc_y;
+		// Apply gravity to all particles
+		p->vy += acc_y;
+
+		// Cap snow particle velocity to prevent accelerating too fast
+		if(p->type == 254) {
+			if(p->vy < -2.0F) p->vy = -2.0F;
 		}
 
 		float movement_x = p->vx * dt;
