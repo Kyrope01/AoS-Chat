@@ -87,6 +87,7 @@ extern struct RENDER_OPTIONS {
 	int auto_demo_recording;
 	int rain;
 	int snow;
+	int dust_storm;
 } settings, settings_tmp;
 
 extern struct list config_keys;

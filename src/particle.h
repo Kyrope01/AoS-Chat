@@ -40,5 +40,6 @@ void particle_create(unsigned int color, float x, float y, float z, float veloci
 					 float min_size, float max_size);
 void particle_create_rain(void);
 void particle_create_snow(void);
+void particle_create_dust_storm(void);
 
 #endif

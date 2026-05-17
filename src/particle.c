@@ -39,6 +39,8 @@ struct tesselator particle_tesselator;
 
 static float rain_timer = 0.0F;
 static float snow_timer = 0.0F;
+static float dust_storm_timer = 0.0F;
+static float dust_storm_direction_angle = 0.0F;
 
 void particle_init() {
 	entitysys_create(&particles, sizeof(struct Particle), 256);
@@ -58,8 +60,10 @@ static bool particle_update_single(void* obj, void* user) {
 	} else {
 		float acc_y = -32.0F * dt;
 
-		// Apply gravity to all particles
-		p->vy += acc_y;
+		// Apply gravity to all particles except dust storm (type 253)
+		if(p->type != 253) {
+			p->vy += acc_y;
+		}
 
 		// Cap snow particle velocity to prevent accelerating too fast
 		if(p->type == 254) {
@@ -73,17 +77,17 @@ static bool particle_update_single(void* obj, void* user) {
 
 		if(!map_isair(p->x + movement_x, p->y, p->z)) {
 			movement_x = 0.0F;
-			if(p->type == 254) { p->vx = 0.0F; } else { p->vx = -p->vx * 0.6F; }
+			if(p->type == 254) { p->vx = 0.0F; } else if(p->type != 253) { p->vx = -p->vx * 0.6F; }
 			on_ground = true;
 		}
 		if(!map_isair(p->x + movement_x, p->y + movement_y, p->z)) {
 			movement_y = 0.0F;
-			if(p->type == 254) { p->vy = 0.0F; } else { p->vy = -p->vy * 0.6F; }
+			if(p->type == 254) { p->vy = 0.0F; } else if(p->type != 253) { p->vy = -p->vy * 0.6F; }
 			on_ground = true;
 		}
 		if(!map_isair(p->x + movement_x, p->y + movement_y, p->z + movement_z)) {
 			movement_z = 0.0F;
-			if(p->type == 254) { p->vz = 0.0F; } else { p->vz = -p->vz * 0.6F; }
+			if(p->type == 254) { p->vz = 0.0F; } else if(p->type != 253) { p->vz = -p->vz * 0.6F; }
 			on_ground = true;
 		}
 
@@ -92,16 +96,18 @@ static bool particle_update_single(void* obj, void* user) {
 
 		// air and ground friction
 		if(on_ground) {
-			p->vx *= pow1_tys; // pow(0.1F, dt);
-			p->vy *= pow1_tys; // pow(0.1F, dt);
-			p->vz *= pow1_tys; // pow(0.1F, dt);
+			if(p->type != 253) {
+				p->vx *= pow1_tys; // pow(0.1F, dt);
+				p->vy *= pow1_tys; // pow(0.1F, dt);
+				p->vz *= pow1_tys; // pow(0.1F, dt);
 
-			if(abs(p->vx) < 0.1F)
-				p->vx = 0.0F;
-			if(abs(p->vy) < 0.1F)
-				p->vy = 0.0F;
-			if(abs(p->vz) < 0.1F)
-				p->vz = 0.0F;
+				if(abs(p->vx) < 0.1F)
+					p->vx = 0.0F;
+				if(abs(p->vy) < 0.1F)
+					p->vy = 0.0F;
+				if(abs(p->vz) < 0.1F)
+					p->vz = 0.0F;
+			}
 		} else {
 			p->vx *= pow4_tys; // pow(0.4F, dt);
 			p->vy *= pow4_tys; // pow(0.4F, dt);
@@ -306,6 +312,84 @@ void particle_create_snow(void) {
 						  .fade = window_time(),
 						  .color = rgba(0xFF, 0xFF, 0xFF, 0xFF), // White color for snow
 						  .type = 254, // Special type for snow (different fade time)
+					  });
+	}
+}
+
+void particle_create_dust_storm(void) {
+	dust_storm_timer += 0.016F;
+	if(dust_storm_timer < 0.05F) {
+		return;
+	}
+	dust_storm_timer = 0.0F;
+
+	struct Player* local = &players[local_player_id];
+	if(!local || !local->connected) {
+		return;
+	}
+
+	float player_x = local->pos.x;
+	float player_y = local->pos.y;
+	float player_z = local->pos.z;
+
+	float render_dist = sqrtf(settings.render_distance * settings.render_distance);
+	float spawn_distance = 100.0F;
+
+	// Randomly change direction every few frames
+	if(((int)(window_time() * 100)) % 200 == 0) {
+		dust_storm_direction_angle = (((float)rand() / (float)RAND_MAX) * 2.0F * (float)M_PI);
+	}
+
+	float dir_x = cosf(dust_storm_direction_angle);
+	float dir_z = sinf(dust_storm_direction_angle);
+
+	int particles_per_frame = 225;
+
+	for(int i = 0; i < particles_per_frame; i++) {
+		// Spawn particles at a distance from player in X and Z axis
+		float angle = (((float)rand() / (float)RAND_MAX) * 2.0F * (float)M_PI);
+		float spawn_x = player_x + cosf(angle) * spawn_distance;
+		float spawn_z = player_z + sinf(angle) * spawn_distance;
+
+		if(spawn_x < 0 || spawn_x >= map_size_x || spawn_z < 0 || spawn_z >= map_size_z) {
+			continue;
+		}
+
+		// Calculate velocity towards player (same max speed as rain: ~15-20)
+		float dx = player_x - spawn_x;
+		float dz = player_z - spawn_z;
+		float dist = sqrtf(dx * dx + dz * dz);
+		float speed = 15.0F + ((float)rand() / (float)RAND_MAX) * 5.0F; // Same as rain
+
+		float vx = (dx / dist) * speed;
+		float vz = (dz / dist) * speed;
+
+		// Dust storm particles: dark grey mixed with dusty brown
+		unsigned char r, g, b;
+		if(rand() % 2 == 0) {
+			// Dark grey
+			r = 80 + (rand() % 40);
+			g = 80 + (rand() % 40);
+			b = 80 + (rand() % 40);
+		} else {
+			// Dusty brown
+			r = 139 + (rand() % 30);
+			g = 90 + (rand() % 30);
+			b = 43 + (rand() % 20);
+		}
+
+		entitysys_add(&particles,
+					  &(struct Particle) {
+						  .size = 0.15F + ((float)rand() / (float)RAND_MAX) * 0.1F,
+						  .x = spawn_x,
+						  .y = player_y + 2.0F + ((float)rand() / (float)RAND_MAX) * 10.0F,
+						  .z = spawn_z,
+						  .vx = vx,
+						  .vy = 0.0F, // No gravity
+						  .vz = vz,
+						  .fade = window_time(),
+						  .color = rgba(r, g, b, 0xFF),
+						  .type = 253, // Special type for dust storm (no gravity)
 					  });
 	}
 }
