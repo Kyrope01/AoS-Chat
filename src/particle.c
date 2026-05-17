@@ -69,17 +69,17 @@ static bool particle_update_single(void* obj, void* user) {
 
 		if(!map_isair(p->x + movement_x, p->y, p->z)) {
 			movement_x = 0.0F;
-			if(p->type != 254) { p->vx = -p->vx * 0.6F; } else { p->vx = 0.0F; }
+			if(p->type == 254) { p->vx = 0.0F; } else { p->vx = -p->vx * 0.6F; }
 			on_ground = true;
 		}
 		if(!map_isair(p->x + movement_x, p->y + movement_y, p->z)) {
 			movement_y = 0.0F;
-			if(p->type != 254) { p->vy = -p->vy * 0.6F; } else { p->vy = 0.0F; }
+			if(p->type == 254) { p->vy = 0.0F; } else { p->vy = -p->vy * 0.6F; }
 			on_ground = true;
 		}
 		if(!map_isair(p->x + movement_x, p->y + movement_y, p->z + movement_z)) {
 			movement_z = 0.0F;
-			if(p->type != 254) { p->vz = -p->vz * 0.6F; } else { p->vz = 0.0F; }
+			if(p->type == 254) { p->vz = 0.0F; } else { p->vz = -p->vz * 0.6F; }
 			on_ground = true;
 		}
 
