@@ -297,7 +297,7 @@ void particle_create_snow(void) {
 						  .y = snow_height,
 						  .z = spawn_z,
 						  .vx = 0.0F,
-						  .vy = -7.5F - ((float)rand() / (float)RAND_MAX) * 2.5F, // Half the speed of rain (was -15 to -20, now -7.5 to -10)
+						  .vy = -2.0F - ((float)rand() / (float)RAND_MAX) * 2.0F, // Much slower speed for snow
 						  .vz = 0.0F,
 						  .fade = window_time(),
 						  .color = rgba(0xFF, 0xFF, 0xFF, 0xFF), // White color for snow
