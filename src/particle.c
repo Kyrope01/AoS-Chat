@@ -332,7 +332,6 @@ void particle_create_dust_storm(void) {
 	float player_y = local->pos.y;
 	float player_z = local->pos.z;
 
-	float render_dist = sqrtf(settings.render_distance * settings.render_distance);
 	float spawn_distance = 100.0F;
 
 	// Randomly change direction every few frames
@@ -346,10 +345,17 @@ void particle_create_dust_storm(void) {
 	int particles_per_frame = 225;
 
 	for(int i = 0; i < particles_per_frame; i++) {
-		// Spawn particles at a distance from player in X and Z axis
-		float angle = (((float)rand() / (float)RAND_MAX) * 2.0F * (float)M_PI);
-		float spawn_x = player_x + cosf(angle) * spawn_distance;
-		float spawn_z = player_z + sinf(angle) * spawn_z;
+		// Spawn particles in a rectangular area perpendicular to wind direction
+		// Create a line perpendicular to the wind direction
+		float perp_x = -dir_z; // Perpendicular vector
+		float perp_z = dir_x;
+		
+		// Random position along the perpendicular line (width of storm)
+		float width_offset = ((float)rand() / (float)RAND_MAX) * 200.0F - 100.0F;
+		
+		// Spawn position: distance away in wind direction, offset perpendicular
+		float spawn_x = player_x - dir_x * spawn_distance + perp_x * width_offset;
+		float spawn_z = player_z - dir_z * spawn_distance + perp_z * width_offset;
 
 		// Clamp spawn positions to map bounds
 		if(spawn_x < 0) spawn_x = 0;
@@ -357,14 +363,20 @@ void particle_create_dust_storm(void) {
 		if(spawn_z < 0) spawn_z = 0;
 		if(spawn_z >= map_size_z) spawn_z = map_size_z - 1;
 
-		// Calculate velocity towards player (same max speed as rain: ~15-20)
+		// Calculate velocity towards player with some spread
 		float dx = player_x - spawn_x;
 		float dz = player_z - spawn_z;
 		float dist = sqrtf(dx * dx + dz * dz);
 		float speed = 15.0F + ((float)rand() / (float)RAND_MAX) * 5.0F; // Same as rain
-
-		float vx = (dx / dist) * speed;
-		float vz = (dz / dist) * speed;
+		
+		// Add some randomness to direction so they don't all go to exact same point
+		float angle_spread = ((float)rand() / (float)RAND_MAX) * 0.3F - 0.15F; // ±~8 degrees
+		float cos_spread = cosf(angle_spread);
+		float sin_spread = sinf(angle_spread);
+		
+		// Rotate velocity slightly
+		float vx = ((dx / dist) * cos_spread - (-dz / dist) * sin_spread) * speed;
+		float vz = ((dz / dist) * cos_spread + (dx / dist) * sin_spread) * speed;
 
 		// Dust storm particles: dark grey mixed with dusty brown
 		unsigned char r, g, b;
