@@ -51,8 +51,15 @@ static bool particle_update_single(void* obj, void* user) {
 	struct Particle* p = (struct Particle*)obj;
 	float dt = *(float*)user;
 	
-	// Determine fade time based on particle type (snow fades slower than rain)
-	float fade_time = (p->type == 254) ? 16.0F : 2.6F; // Snow (type 254) takes 16 seconds to fade, rain takes 2.6 (30% longer)
+	// Determine fade time based on particle type (snow and dust storm fade slower than rain)
+	float fade_time;
+	if(p->type == 254) {
+		fade_time = 16.0F; // Snow (type 254) takes 16 seconds to fade
+	} else if(p->type == 253) {
+		fade_time = 16.0F; // Dust storm (type 253) also takes 16 seconds to fade like snow
+	} else {
+		fade_time = 2.6F; // Rain takes 2.6 seconds (30% longer)
+	}
 	float size = p->size * (1.0F - ((float)(window_time() - p->fade) / fade_time));
 
 	if(size < 0.01F) {
@@ -133,8 +140,15 @@ static bool particle_render_single(void* obj, void* user) {
 	if(distance2D(camera_x, camera_z, p->x, p->z) > settings.render_distance * settings.render_distance)
 		return false;
 
-	// Determine fade time based on particle type (snow fades slower than rain)
-	float fade_time = (p->type == 254) ? 16.0F : 2.6F; // Snow (type 254) takes 16 seconds to fade, rain takes 2.6 (30% longer)
+	// Determine fade time based on particle type (snow and dust storm fade slower than rain)
+	float fade_time;
+	if(p->type == 254) {
+		fade_time = 16.0F; // Snow (type 254) takes 16 seconds to fade
+	} else if(p->type == 253) {
+		fade_time = 16.0F; // Dust storm (type 253) also takes 16 seconds to fade like snow
+	} else {
+		fade_time = 2.6F; // Rain takes 2.6 seconds (30% longer)
+	}
 	float size = p->size / 2.0F * (1.0F - ((float)(window_time() - p->fade) / fade_time));
 
 	if(p->type == 255 || p->type == 254 || p->type == 253) {
@@ -332,7 +346,7 @@ void particle_create_dust_storm(void) {
 	float player_y = local->pos.y;
 	float player_z = local->pos.z;
 
-	float spawn_distance = 50.0F;
+	float spawn_distance = 40.0F; // Reduced by 20% from 50.0F
 
 	// Randomly change direction every few frames
 	if(((int)(window_time() * 100)) % 200 == 0) {
@@ -367,7 +381,7 @@ void particle_create_dust_storm(void) {
 		float dx = player_x - spawn_x;
 		float dz = player_z - spawn_z;
 		float dist = sqrtf(dx * dx + dz * dz);
-		float speed = 15.0F + ((float)rand() / (float)RAND_MAX) * 5.0F; // Same as rain
+		float speed = 18.75F + ((float)rand() / (float)RAND_MAX) * 6.25F; // Increased by 25% from 15.0F + 5.0F
 		
 		// Add some randomness to direction so they don't all go to exact same point
 		float angle_spread = ((float)rand() / (float)RAND_MAX) * 0.3F - 0.15F; // ±~8 degrees
