@@ -58,7 +58,7 @@ static bool particle_update_single(void* obj, void* user) {
 	} else {
 		float acc_y = -32.0F * dt;
 
-		if(map_isair(p->x, p->y + acc_y * dt - p->size / 2.0F, p->z) && !p->y + acc_y * dt < 0.0F) {
+		if(p->type != 254 && map_isair(p->x, p->y + acc_y * dt - p->size / 2.0F, p->z) && !p->y + acc_y * dt < 0.0F) {
 			p->vy += acc_y;
 		}
 
@@ -69,17 +69,17 @@ static bool particle_update_single(void* obj, void* user) {
 
 		if(!map_isair(p->x + movement_x, p->y, p->z)) {
 			movement_x = 0.0F;
-			p->vx = -p->vx * 0.6F;
+			if(p->type != 254) { p->vx = -p->vx * 0.6F; } else { p->vx = 0.0F; }
 			on_ground = true;
 		}
 		if(!map_isair(p->x + movement_x, p->y + movement_y, p->z)) {
 			movement_y = 0.0F;
-			p->vy = -p->vy * 0.6F;
+			if(p->type != 254) { p->vy = -p->vy * 0.6F; } else { p->vy = 0.0F; }
 			on_ground = true;
 		}
 		if(!map_isair(p->x + movement_x, p->y + movement_y, p->z + movement_z)) {
 			movement_z = 0.0F;
-			p->vz = -p->vz * 0.6F;
+			if(p->type != 254) { p->vz = -p->vz * 0.6F; } else { p->vz = 0.0F; }
 			on_ground = true;
 		}
 
@@ -297,7 +297,7 @@ void particle_create_snow(void) {
 						  .y = snow_height,
 						  .z = spawn_z,
 						  .vx = 0.0F,
-						  .vy = -2.0F - ((float)rand() / (float)RAND_MAX) * 2.0F, // Much slower speed for snow
+						  .vy = -1.0F - ((float)rand() / (float)RAND_MAX) * 1.0F, // Much slower speed for snow
 						  .vz = 0.0F,
 						  .fade = window_time(),
 						  .color = rgba(0xFF, 0xFF, 0xFF, 0xFF), // White color for snow
