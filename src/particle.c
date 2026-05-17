@@ -63,7 +63,7 @@ static bool particle_update_single(void* obj, void* user) {
 
 		// Cap snow particle velocity to prevent accelerating too fast
 		if(p->type == 254) {
-			if(p->vy < -2.0F) p->vy = -2.0F;
+			if(p->vy < -6.0F) p->vy = -6.0F;
 		}
 
 		float movement_x = p->vx * dt;
@@ -301,7 +301,7 @@ void particle_create_snow(void) {
 						  .y = snow_height,
 						  .z = spawn_z,
 						  .vx = 0.0F,
-						  .vy = -1.0F - ((float)rand() / (float)RAND_MAX) * 1.0F, // Much slower speed for snow
+						  .vy = -3.0F - ((float)rand() / (float)RAND_MAX) * 3.0F, // Tripled speed for snow
 						  .vz = 0.0F,
 						  .fade = window_time(),
 						  .color = rgba(0xFF, 0xFF, 0xFF, 0xFF), // White color for snow
