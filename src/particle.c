@@ -332,7 +332,7 @@ void particle_create_dust_storm(void) {
 	float player_y = local->pos.y;
 	float player_z = local->pos.z;
 
-	float spawn_distance = 100.0F;
+	float spawn_distance = 50.0F;
 
 	// Randomly change direction every few frames
 	if(((int)(window_time() * 100)) % 200 == 0) {
