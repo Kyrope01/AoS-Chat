@@ -26,9 +26,8 @@ CMAKE_ADDR2LINE:FILEPATH=/usr/bin/addr2line
 //Path to a program.
 CMAKE_AR:FILEPATH=/usr/bin/ar
 
-//Choose the type of build, options are: None Debug Release RelWithDebInfo
-// MinSizeRel ...
-CMAKE_BUILD_TYPE:STRING=Debug
+//Choose the type of build.
+CMAKE_BUILD_TYPE:STRING=Release
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
@@ -363,14 +362,17 @@ KyroSpades_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 KyroSpades_SOURCE_DIR:STATIC=/workspace
 
+//Path to a file.
+OPENAL_INCLUDE_DIR:PATH=/usr/include/AL
+
+//Path to a library.
+OPENAL_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libopenal.so
+
 //Arguments to supply to pkg-config
 PKG_CONFIG_ARGN:STRING=
 
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=PKG_CONFIG_EXECUTABLE-NOTFOUND
-
-//No help, variable specified on the command line.
-USE_SYSTEM_GLFW:UNINITIALIZED=OFF
 
 //Value Computed by CMake
 cglm_BINARY_DIR:STATIC=/workspace/build/_deps/cglm-build
@@ -382,10 +384,22 @@ cglm_IS_TOP_LEVEL:STATIC=OFF
 cglm_SOURCE_DIR:STATIC=/workspace/build/_deps/cglm-src
 
 //Path to a file.
-glfw3_INCLUDE_DIR:PATH=glfw3_INCLUDE_DIR-NOTFOUND
+deflate_INCLUDE_DIR:PATH=/workspace/deps
 
 //Path to a library.
-glfw3_LIBRARY:FILEPATH=glfw3_LIBRARY-NOTFOUND
+deflate_LIBRARY:FILEPATH=deflate_LIBRARY-NOTFOUND
+
+//Path to a file.
+enet_INCLUDE_DIR:PATH=/usr/include
+
+//Path to a library.
+enet_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libenet.so
+
+//Path to a file.
+glfw3_INCLUDE_DIR:PATH=/usr/include
+
+//Path to a library.
+glfw3_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libglfw.so
 
 //Value Computed by CMake
 vxl_BINARY_DIR:STATIC=/workspace/build/_deps/vxl-build
@@ -597,8 +611,60 @@ CPACK_SOURCE_TXZ-ADVANCED:INTERNAL=1
 CPACK_SOURCE_TZ-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CPACK_SOURCE_ZIP
 CPACK_SOURCE_ZIP-ADVANCED:INTERNAL=1
+//Details about finding OpenAL
+FIND_PACKAGE_MESSAGE_DETAILS_OpenAL:INTERNAL=[/usr/lib/x86_64-linux-gnu/libopenal.so][/usr/include/AL][v()]
+//Details about finding enet
+FIND_PACKAGE_MESSAGE_DETAILS_enet:INTERNAL=[/usr/lib/x86_64-linux-gnu/libenet.so][/usr/include][v()]
+//Details about finding glfw3
+FIND_PACKAGE_MESSAGE_DETAILS_glfw3:INTERNAL=[/usr/lib/x86_64-linux-gnu/libglfw.so][/usr/include][v()]
 //ADVANCED property for variable: GIT_EXECUTABLE
 GIT_EXECUTABLE-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: OPENAL_INCLUDE_DIR
+OPENAL_INCLUDE_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: OPENAL_LIBRARY
+OPENAL_LIBRARY-ADVANCED:INTERNAL=1
+PC_deflate_CFLAGS:INTERNAL=
+PC_deflate_CFLAGS_I:INTERNAL=
+PC_deflate_CFLAGS_OTHER:INTERNAL=
+PC_deflate_FOUND:INTERNAL=
+PC_deflate_INCLUDEDIR:INTERNAL=
+PC_deflate_LIBDIR:INTERNAL=
+PC_deflate_LIBS:INTERNAL=
+PC_deflate_LIBS_L:INTERNAL=
+PC_deflate_LIBS_OTHER:INTERNAL=
+PC_deflate_LIBS_PATHS:INTERNAL=
+PC_deflate_MODULE_NAME:INTERNAL=
+PC_deflate_PREFIX:INTERNAL=
+PC_deflate_STATIC_CFLAGS:INTERNAL=
+PC_deflate_STATIC_CFLAGS_I:INTERNAL=
+PC_deflate_STATIC_CFLAGS_OTHER:INTERNAL=
+PC_deflate_STATIC_LIBDIR:INTERNAL=
+PC_deflate_STATIC_LIBS:INTERNAL=
+PC_deflate_STATIC_LIBS_L:INTERNAL=
+PC_deflate_STATIC_LIBS_OTHER:INTERNAL=
+PC_deflate_STATIC_LIBS_PATHS:INTERNAL=
+PC_deflate_VERSION:INTERNAL=
+PC_enet_CFLAGS:INTERNAL=
+PC_enet_CFLAGS_I:INTERNAL=
+PC_enet_CFLAGS_OTHER:INTERNAL=
+PC_enet_FOUND:INTERNAL=
+PC_enet_INCLUDEDIR:INTERNAL=
+PC_enet_LIBDIR:INTERNAL=
+PC_enet_LIBS:INTERNAL=
+PC_enet_LIBS_L:INTERNAL=
+PC_enet_LIBS_OTHER:INTERNAL=
+PC_enet_LIBS_PATHS:INTERNAL=
+PC_enet_MODULE_NAME:INTERNAL=
+PC_enet_PREFIX:INTERNAL=
+PC_enet_STATIC_CFLAGS:INTERNAL=
+PC_enet_STATIC_CFLAGS_I:INTERNAL=
+PC_enet_STATIC_CFLAGS_OTHER:INTERNAL=
+PC_enet_STATIC_LIBDIR:INTERNAL=
+PC_enet_STATIC_LIBS:INTERNAL=
+PC_enet_STATIC_LIBS_L:INTERNAL=
+PC_enet_STATIC_LIBS_OTHER:INTERNAL=
+PC_enet_STATIC_LIBS_PATHS:INTERNAL=
+PC_enet_VERSION:INTERNAL=
 PC_glfw3_CFLAGS:INTERNAL=
 PC_glfw3_CFLAGS_I:INTERNAL=
 PC_glfw3_CFLAGS_OTHER:INTERNAL=
@@ -628,5 +694,7 @@ PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
 _CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/usr/local
+__pkg_config_checked_PC_deflate:INTERNAL=1
+__pkg_config_checked_PC_enet:INTERNAL=1
 __pkg_config_checked_PC_glfw3:INTERNAL=1
 

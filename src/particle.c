@@ -349,11 +349,13 @@ void particle_create_dust_storm(void) {
 		// Spawn particles at a distance from player in X and Z axis
 		float angle = (((float)rand() / (float)RAND_MAX) * 2.0F * (float)M_PI);
 		float spawn_x = player_x + cosf(angle) * spawn_distance;
-		float spawn_z = player_z + sinf(angle) * spawn_distance;
+		float spawn_z = player_z + sinf(angle) * spawn_z;
 
-		if(spawn_x < 0 || spawn_x >= map_size_x || spawn_z < 0 || spawn_z >= map_size_z) {
-			continue;
-		}
+		// Clamp spawn positions to map bounds
+		if(spawn_x < 0) spawn_x = 0;
+		if(spawn_x >= map_size_x) spawn_x = map_size_x - 1;
+		if(spawn_z < 0) spawn_z = 0;
+		if(spawn_z >= map_size_z) spawn_z = map_size_z - 1;
 
 		// Calculate velocity towards player (same max speed as rain: ~15-20)
 		float dx = player_x - spawn_x;
