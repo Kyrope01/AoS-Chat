@@ -50,7 +50,7 @@ static bool particle_update_single(void* obj, void* user) {
 	float dt = *(float*)user;
 	
 	// Determine fade time based on particle type (snow fades slower than rain)
-	float fade_time = (p->type == 254) ? 16.0F : 2.0F; // Snow (type 254) takes 16 seconds to fade, rain takes 2
+	float fade_time = (p->type == 254) ? 16.0F : 2.6F; // Snow (type 254) takes 16 seconds to fade, rain takes 2.6 (30% longer)
 	float size = p->size * (1.0F - ((float)(window_time() - p->fade) / fade_time));
 
 	if(size < 0.01F) {
@@ -128,7 +128,7 @@ static bool particle_render_single(void* obj, void* user) {
 		return false;
 
 	// Determine fade time based on particle type (snow fades slower than rain)
-	float fade_time = (p->type == 254) ? 16.0F : 2.0F; // Snow (type 254) takes 16 seconds to fade, rain takes 2
+	float fade_time = (p->type == 254) ? 16.0F : 2.6F; // Snow (type 254) takes 16 seconds to fade, rain takes 2.6 (30% longer)
 	float size = p->size / 2.0F * (1.0F - ((float)(window_time() - p->fade) / fade_time));
 
 	if(p->type == 255 || p->type == 254) {
@@ -233,7 +233,7 @@ void particle_create_rain(void) {
 	float rain_height = player_y + 40.0F; // Spawn twice as high (was 20.0F, now 40.0F)
 	float render_dist = sqrtf(settings.render_distance * settings.render_distance);
 
-	int particles_per_frame = 150;
+	int particles_per_frame = 225; // Increased by 50% (was 150)
 
 	for(int i = 0; i < particles_per_frame; i++) {
 		float offset_x = (((float)rand() / (float)RAND_MAX) * 2.0F - 1.0F) * render_dist;
@@ -281,7 +281,7 @@ void particle_create_snow(void) {
 	float snow_height = player_y + 40.0F; // Spawn twice as high (same as rain)
 	float render_dist = sqrtf(settings.render_distance * settings.render_distance);
 
-	int particles_per_frame = 150;
+	int particles_per_frame = 225; // Increased by 50% (was 150)
 
 	for(int i = 0; i < particles_per_frame; i++) {
 		float offset_x = (((float)rand() / (float)RAND_MAX) * 2.0F - 1.0F) * render_dist;
