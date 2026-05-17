@@ -137,7 +137,7 @@ static bool particle_render_single(void* obj, void* user) {
 	float fade_time = (p->type == 254) ? 16.0F : 2.6F; // Snow (type 254) takes 16 seconds to fade, rain takes 2.6 (30% longer)
 	float size = p->size / 2.0F * (1.0F - ((float)(window_time() - p->fade) / fade_time));
 
-	if(p->type == 255 || p->type == 254) {
+	if(p->type == 255 || p->type == 254 || p->type == 253) {
 		tesselator_set_color(tess, p->color);
 
 		tesselator_addf_cube_face(tess, CUBE_FACE_X_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
