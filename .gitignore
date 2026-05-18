@@ -1,1 +1,45 @@
-Nothing needs to be added to .gitignore since only a source code file (.c) was modified and there are no build artifacts, dependencies, or temporary files in the changes.
+```
+# CMake build artifacts
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Compiled binaries and objects
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.exe
+*.bin
+*.out
+
+# Dependencies downloaded by CMake
+_deps/
+
+# Package config files
+*.pc
+
+# Temporary build files
+*.tmp
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# Compressed archives
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+```
