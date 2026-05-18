@@ -1,0 +1,36 @@
+```
+# Build artifacts
+build/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Dependencies and subprojects
+_deps/
+
+# Compiled objects and libraries
+*.o
+*.a
+*.lib
+*.so
+*.dll
+*.dylib
+
+# CMake temporary files
+CMakeOutput.log
+CMakeError.log
+
+# Progress and temporary build files
+progress.marks
+count.txt
+
+# Package config files
+*.pc
+
+# Temporary directories
+tmp/
+
+```

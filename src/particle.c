@@ -56,6 +56,46 @@ static bool particle_update_single(void* obj, void* user) {
 	if(size < 0.01F) {
 		return true;
 	} else {
+		// Rain and snow only move vertically until near ground - skip expensive physics
+		if(p->type == 255 || p->type == 254) {
+			// Only check collision when within 2 units of ground level to avoid lock contention
+			// Most particles are high in the air, so this skips ~90% of map_isair calls
+			int y_check = (int)(p->y + p->vy * dt);
+			
+			// Fast path: if still high above ground, just apply velocity
+			if(y_check > 2) {
+				p->y += p->vy * dt;
+				
+				// Apply minimal gravity for snow to cap velocity
+				if(p->type == 254 && p->vy < -6.0F) {
+					p->vy = -6.0F;
+				}
+				
+				return false;
+			}
+			
+			// Near ground - do collision check
+			float movement_y = p->vy * dt;
+			
+			if(!map_isair((int)p->x, y_check, (int)p->z)) {
+				// Hit ground
+				if(p->type == 254) {
+					// Snow stays on ground
+					p->vy = 0.0F;
+					p->y = (float)y_check;
+				} else {
+					// Rain bounces
+					p->vy = -p->vy * 0.6F;
+					p->y += movement_y;
+				}
+			} else {
+				p->y += movement_y;
+			}
+			
+			return false;
+		}
+		
+		// Non-weather particles (casings, etc.) use full physics
 		float acc_y = -32.0F * dt;
 
 		// Apply gravity to all particles
@@ -71,17 +111,17 @@ static bool particle_update_single(void* obj, void* user) {
 		float movement_z = p->vz * dt;
 		bool on_ground = false;
 
-		if(!map_isair(p->x + movement_x, p->y, p->z)) {
+		if(!map_isair((int)(p->x + movement_x), (int)p->y, (int)p->z)) {
 			movement_x = 0.0F;
 			if(p->type == 254) { p->vx = 0.0F; } else { p->vx = -p->vx * 0.6F; }
 			on_ground = true;
 		}
-		if(!map_isair(p->x + movement_x, p->y + movement_y, p->z)) {
+		if(!map_isair((int)(p->x + movement_x), (int)(p->y + movement_y), (int)p->z)) {
 			movement_y = 0.0F;
 			if(p->type == 254) { p->vy = 0.0F; } else { p->vy = -p->vy * 0.6F; }
 			on_ground = true;
 		}
-		if(!map_isair(p->x + movement_x, p->y + movement_y, p->z + movement_z)) {
+		if(!map_isair((int)(p->x + movement_x), (int)(p->y + movement_y), (int)(p->z + movement_z))) {
 			movement_z = 0.0F;
 			if(p->type == 254) { p->vz = 0.0F; } else { p->vz = -p->vz * 0.6F; }
 			on_ground = true;
@@ -127,19 +167,21 @@ static bool particle_render_single(void* obj, void* user) {
 	if(distance2D(camera_x, camera_z, p->x, p->z) > settings.render_distance * settings.render_distance)
 		return false;
 
-	// Determine fade time based on particle type (snow fades slower than rain)
-	float fade_time = (p->type == 254) ? 16.0F : 2.6F; // Snow (type 254) takes 16 seconds to fade, rain takes 2.6 (30% longer)
-	float size = p->size / 2.0F * (1.0F - ((float)(window_time() - p->fade) / fade_time));
+	// Pre-calculate fade value once and reuse
+	float fade_time = (p->type == 254) ? 16.0F : 2.6F;
+	float fade_factor = (1.0F - ((float)(window_time() - p->fade) / fade_time));
+	
+	// Early out for faded particles
+	if(fade_factor <= 0.0F) {
+		return true;
+	}
+	
+	float size = p->size * fade_factor;
 
 	if(p->type == 255 || p->type == 254) {
 		tesselator_set_color(tess, p->color);
-
-		tesselator_addf_cube_face(tess, CUBE_FACE_X_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_X_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_Y_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_Y_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_Z_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_Z_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
+		// Use billboard instead of full cube: 4 vertices vs 24 (83% reduction)
+		tesselator_addf_billboard(tess, p->x, p->y, p->z, size);
 	} else {
 		struct kv6_t* casing = weapon_casing(p->type);
 

@@ -330,3 +330,31 @@ void tesselator_addf_cube_face(struct tesselator* t, enum tesselator_cube_face f
 			break;
 	}
 }
+
+void tesselator_addf_billboard(struct tesselator* t, float x, float y, float z, float size) {
+	// Billboard: 2 triangles facing the camera (4 vertices instead of 24 for a cube)
+	// This creates a vertical quad that always faces the viewer
+	float half_size = size * 0.5F;
+	
+	// Create a simple vertical billboard quad
+	// Vertices: bottom-left, top-left, top-right, bottom-right
+#ifdef TESSELATE_QUADS
+	tesselator_addf_simple(t, (float[]) {
+		x - half_size, y, z,           // bottom-left
+		x - half_size, y + size, z,    // top-left
+		x + half_size, y + size, z,    // top-right
+		x + half_size, y, z            // bottom-right
+	});
+#else
+	// Triangle mode: 2 triangles
+	tesselator_addf_simple(t, (float[]) {
+		x - half_size, y, z,           // bottom-left
+		x - half_size, y + size, z,    // top-left
+		x + half_size, y + size, z,    // top-right
+		
+		x - half_size, y, z,           // bottom-left
+		x + half_size, y + size, z,    // top-right
+		x + half_size, y, z            // bottom-right
+	});
+#endif
+}

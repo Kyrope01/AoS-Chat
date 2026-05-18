@@ -72,5 +72,6 @@ void tesselator_addi_cube_face_adv(struct tesselator* t, enum tesselator_cube_fa
 								   int16_t z, int16_t sx, int16_t sy, int16_t sz);
 void tesselator_addf_cube_face(struct tesselator* t, enum tesselator_cube_face face, float x, float y, float z,
 							   float sz);
+void tesselator_addf_billboard(struct tesselator* t, float x, float y, float z, float size);
 
 #endif
