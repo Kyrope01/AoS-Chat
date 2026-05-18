@@ -134,12 +134,9 @@ static bool particle_render_single(void* obj, void* user) {
 	if(p->type == 255 || p->type == 254) {
 		tesselator_set_color(tess, p->color);
 
+		// Render only 2 faces (X and Z axis aligned) for optimized 8-vertex cubes
 		tesselator_addf_cube_face(tess, CUBE_FACE_X_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
 		tesselator_addf_cube_face(tess, CUBE_FACE_X_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_Y_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_Y_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_Z_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
-		tesselator_addf_cube_face(tess, CUBE_FACE_Z_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
 	} else {
 		struct kv6_t* casing = weapon_casing(p->type);
 
