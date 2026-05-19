@@ -30,6 +30,7 @@ struct Particle {
 	float size;
 	float fade;
 	unsigned int color;
+	float rotation; // Rotation angle for snow particles (in radians)
 };
 
 void particle_init(void);

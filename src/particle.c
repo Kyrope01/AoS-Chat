@@ -33,9 +33,11 @@
 #include "tesselator.h"
 #include "entitysystem.h"
 #include "player.h"
+#include "texture.h"
 
 struct entity_system particles;
 struct tesselator particle_tesselator;
+struct texture texture_snow;
 
 static float rain_timer = 0.0F;
 static float snow_timer = 0.0F;
@@ -43,6 +45,7 @@ static float snow_timer = 0.0F;
 void particle_init() {
 	entitysys_create(&particles, sizeof(struct Particle), 256);
 	tesselator_create(&particle_tesselator, VERTEX_FLOAT, 0);
+	texture_create(&texture_snow, "png/snow.png");
 }
 
 static bool particle_update_single(void* obj, void* user) {
@@ -123,7 +126,7 @@ void particle_update(float dt) {
 static bool particle_render_single(void* obj, void* user) {
 	struct Particle* p = (struct Particle*)obj;
 	struct tesselator* tess = (struct tesselator*)user;
-
+	
 	if(distance2D(camera_x, camera_z, p->x, p->z) > settings.render_distance * settings.render_distance)
 		return false;
 
@@ -132,10 +135,9 @@ static bool particle_render_single(void* obj, void* user) {
 	float size = p->size / 2.0F * (1.0F - ((float)(window_time() - p->fade) / fade_time));
 
 	if(p->type == 255 || p->type == 254) {
-		tesselator_set_color(tess, p->color);
-
 		// Render full 24-vertex cubes (6 faces) if 3D snow is enabled
 		if(settings.snow_3d && p->type == 254) {
+			tesselator_set_color(tess, p->color);
 			// Full 6-face cube for 3D snow mode
 			tesselator_addf_cube_face(tess, CUBE_FACE_X_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
 			tesselator_addf_cube_face(tess, CUBE_FACE_X_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
@@ -144,51 +146,41 @@ static bool particle_render_single(void* obj, void* user) {
 			tesselator_addf_cube_face(tess, CUBE_FACE_Z_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
 			tesselator_addf_cube_face(tess, CUBE_FACE_Z_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
 		} else if(p->type == 254) {
-			// Plus-shaped rotating billboard particles for 2D snow (Minecraft-style)
-			// Create rotated plus shape that faces the camera
-			// First quad: vertical, rotates around Y axis
-			float sin_yaw = sinf(camera_rot_y);
-			float cos_yaw = cosf(camera_rot_y);
+			// Render snow.png texture as a rotating billboard quad
+			matrix_push(matrix_model);
+			matrix_identity(matrix_model);
+			matrix_translate(matrix_model, p->x, p->y, p->z);
+			matrix_rotate(matrix_model, p->rotation, 0.0F, 1.0F, 0.0F); // Rotate around Y axis
+			matrix_upload();
 			
-			// Vertical quad (rotates around Y axis to face camera horizontally)
-			float v1x = p->x - size * cos_yaw;
-			float v1y = p->y - size;
-			float v1z = p->z - size * sin_yaw;
+			glEnable(GL_TEXTURE_2D);
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glBindTexture(GL_TEXTURE_2D, texture_snow.texture_id);
 			
-			float v2x = p->x + size * cos_yaw;
-			float v2y = p->y - size;
-			float v2z = p->z + size * sin_yaw;
+			glColor4ub(red(p->color), green(p->color), blue(p->color), alpha(p->color));
 			
-			float v3x = p->x + size * cos_yaw;
-			float v3y = p->y + size;
-			float v3z = p->z + size * sin_yaw;
+			float s = size * 2.0F;
+			float vertices[] = {-s, -s, 0.0F, s, -s, 0.0F, s, s, 0.0F, -s, -s, 0.0F, s, s, 0.0F, -s, s, 0.0F};
+			float texcoords[] = {0.0F, 1.0F, 1.0F, 1.0F, 1.0F, 0.0F, 0.0F, 1.0F, 1.0F, 0.0F, 0.0F, 0.0F};
 			
-			float v4x = p->x - size * cos_yaw;
-			float v4y = p->y + size;
-			float v4z = p->z - size * sin_yaw;
+			glEnableClientState(GL_VERTEX_ARRAY);
+			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+			glVertexPointer(3, GL_FLOAT, 0, vertices);
+			glTexCoordPointer(2, GL_FLOAT, 0, texcoords);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+			glDisableClientState(GL_VERTEX_ARRAY);
+			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 			
-			tesselator_addf_simple(tess, (float[]) {v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, v4x, v4y, v4z});
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glDisable(GL_BLEND);
+			glDisable(GL_TEXTURE_2D);
+			glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 			
-			// Second quad: horizontal cross (perpendicular to first)
-			float h1x = p->x - size * sin_yaw;
-			float h1y = p->y - size;
-			float h1z = p->z + size * cos_yaw;
-			
-			float h2x = p->x + size * sin_yaw;
-			float h2y = p->y - size;
-			float h2z = p->z - size * cos_yaw;
-			
-			float h3x = p->x + size * sin_yaw;
-			float h3y = p->y + size;
-			float h3z = p->z - size * cos_yaw;
-			
-			float h4x = p->x - size * sin_yaw;
-			float h4y = p->y + size;
-			float h4z = p->z + size * cos_yaw;
-			
-			tesselator_addf_simple(tess, (float[]) {h1x, h1y, h1z, h2x, h2y, h2z, h3x, h3y, h3z, h4x, h4y, h4z});
+			matrix_pop(matrix_model);
 		} else {
 			// Optimized 2-face rendering for rain
+			tesselator_set_color(tess, p->color);
 			tesselator_addf_cube_face(tess, CUBE_FACE_X_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
 			tesselator_addf_cube_face(tess, CUBE_FACE_X_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
 		}
@@ -358,6 +350,7 @@ void particle_create_snow(void) {
 						  .fade = window_time(),
 						  .color = rgba(0xFF, 0xFF, 0xFF, 0xFF), // White color for snow
 						  .type = 254, // Special type for snow (different fade time)
+						  .rotation = (((float)rand() / (float)RAND_MAX) * 2.0F - 1.0F) * (80.0F * M_PI / 180.0F), // Random rotation up to 80 degrees
 					  });
 	}
 }
