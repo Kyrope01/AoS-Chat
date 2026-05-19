@@ -134,7 +134,7 @@ static bool particle_render_single(void* obj, void* user) {
 	if(p->type == 255 || p->type == 254) {
 		tesselator_set_color(tess, p->color);
 
-		// Render optimized 8-vertex cubes (2 faces) by default, or full 24-vertex cubes (6 faces) if 3D snow is enabled
+		// Render full 24-vertex cubes (6 faces) if 3D snow is enabled
 		if(settings.snow_3d && p->type == 254) {
 			// Full 6-face cube for 3D snow mode
 			tesselator_addf_cube_face(tess, CUBE_FACE_X_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
@@ -143,8 +143,52 @@ static bool particle_render_single(void* obj, void* user) {
 			tesselator_addf_cube_face(tess, CUBE_FACE_Y_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
 			tesselator_addf_cube_face(tess, CUBE_FACE_Z_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
 			tesselator_addf_cube_face(tess, CUBE_FACE_Z_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
+		} else if(p->type == 254) {
+			// Plus-shaped rotating billboard particles for 2D snow (Minecraft-style)
+			// Create rotated plus shape that faces the camera
+			// First quad: vertical, rotates around Y axis
+			float sin_yaw = sinf(camera_rot_y);
+			float cos_yaw = cosf(camera_rot_y);
+			
+			// Vertical quad (rotates around Y axis to face camera horizontally)
+			float v1x = p->x - size * cos_yaw;
+			float v1y = p->y - size;
+			float v1z = p->z - size * sin_yaw;
+			
+			float v2x = p->x + size * cos_yaw;
+			float v2y = p->y - size;
+			float v2z = p->z + size * sin_yaw;
+			
+			float v3x = p->x + size * cos_yaw;
+			float v3y = p->y + size;
+			float v3z = p->z + size * sin_yaw;
+			
+			float v4x = p->x - size * cos_yaw;
+			float v4y = p->y + size;
+			float v4z = p->z - size * sin_yaw;
+			
+			tesselator_addf_simple(tess, (float[]) {v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, v4x, v4y, v4z});
+			
+			// Second quad: horizontal cross (perpendicular to first)
+			float h1x = p->x - size * sin_yaw;
+			float h1y = p->y - size;
+			float h1z = p->z + size * cos_yaw;
+			
+			float h2x = p->x + size * sin_yaw;
+			float h2y = p->y - size;
+			float h2z = p->z - size * cos_yaw;
+			
+			float h3x = p->x + size * sin_yaw;
+			float h3y = p->y + size;
+			float h3z = p->z - size * cos_yaw;
+			
+			float h4x = p->x - size * sin_yaw;
+			float h4y = p->y + size;
+			float h4z = p->z + size * cos_yaw;
+			
+			tesselator_addf_simple(tess, (float[]) {h1x, h1y, h1z, h2x, h2y, h2z, h3x, h3y, h3z, h4x, h4y, h4z});
 		} else {
-			// Optimized 2-face rendering for rain and non-3D snow
+			// Optimized 2-face rendering for rain
 			tesselator_addf_cube_face(tess, CUBE_FACE_X_N, p->x - size, p->y - size, p->z - size, size * 2.0F);
 			tesselator_addf_cube_face(tess, CUBE_FACE_X_P, p->x - size, p->y - size, p->z - size, size * 2.0F);
 		}
