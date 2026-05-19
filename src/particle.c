@@ -322,10 +322,10 @@ void particle_create_snow(void) {
 	float player_y = local->pos.y;
 	float player_z = local->pos.z;
 
-	float snow_height = player_y + 40.0F; // Spawn twice as high (same as rain)
+	float snow_height = player_y + 50.0F; // Spawn 50 blocks above player
 	float render_dist = sqrtf(settings.render_distance * settings.render_distance);
 
-	int particles_per_frame = 225; // Increased by 50% (was 150)
+	int particles_per_frame = 75; // Reduced from 225 to fix lag
 
 	for(int i = 0; i < particles_per_frame; i++) {
 		float offset_x = (((float)rand() / (float)RAND_MAX) * 2.0F - 1.0F) * render_dist;
@@ -345,12 +345,12 @@ void particle_create_snow(void) {
 						  .y = snow_height,
 						  .z = spawn_z,
 						  .vx = 0.0F,
-						  .vy = -3.0F - ((float)rand() / (float)RAND_MAX) * 3.0F, // Tripled speed for snow
+						  .vy = -3.0F - ((float)rand() / (float)RAND_MAX) * 3.0F,
 						  .vz = 0.0F,
 						  .fade = window_time(),
-						  .color = rgba(0xFF, 0xFF, 0xFF, 0xFF), // White color for snow
-						  .type = 254, // Special type for snow (different fade time)
-						  .rotation = (((float)rand() / (float)RAND_MAX) * 2.0F - 1.0F) * (80.0F * M_PI / 180.0F), // Random rotation up to 80 degrees
+						  .color = rgba(0xFF, 0xFF, 0xFF, 0xFF),
+						  .type = 254,
+						  .rotation = (((float)rand() / (float)RAND_MAX) * 2.0F - 1.0F) * (80.0F * M_PI / 180.0F),
 					  });
 	}
 }
