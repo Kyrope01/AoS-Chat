@@ -1,6 +1,12 @@
 ```
-# CI/CD
-.github/
+# Compiled and build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.out
 
 # Dependencies
 node_modules/
@@ -12,23 +18,11 @@ __pycache__/
 target/
 .gradle/
 
-# Compiled files
-*.pyc
-*.class
-*.o
-*.exe
-*.dll
-*.so
-*.a
-*.obj
-*.out
-
-# Build artifacts
-dist/
-build/
-coverage/
-htmlcov/
-.coverage
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
 
 # Environment
 .env
@@ -38,16 +32,15 @@ htmlcov/
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
 
-# System
+# System files
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
 # Compressed files
 *.zip

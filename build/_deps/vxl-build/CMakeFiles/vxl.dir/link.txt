@@ -1,0 +1,2 @@
+/usr/bin/ar qc libvxl.a CMakeFiles/vxl.dir/libvxl.c.o
+/usr/bin/ranlib libvxl.a

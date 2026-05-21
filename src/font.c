@@ -49,6 +49,21 @@ static const struct { int first; int count; } font_ranges[] = {
 };
 #define FONT_RANGE_COUNT ((int)(sizeof(font_ranges) / sizeof(font_ranges[0])))
 
+/* Emoji Unicode ranges - these will use the emoji font */
+static const struct { int first; int count; } emoji_ranges[] = {
+	{ 0x1F300, 0x0100 }, /* Miscellaneous Symbols and Pictographs */
+	{ 0x1F600, 0x0060 }, /* Emoticons */
+	{ 0x1F680, 0x0080 }, /* Transport and Map Symbols */
+	{ 0x1F700, 0x0040 }, /* Alchemical Symbols */
+	{ 0x1F900, 0x0080 }, /* Supplemental Symbols and Pictographs */
+	{ 0x2600,  0x0020 }, /* Miscellaneous Symbols (some are emoji) */
+	{ 0x2700,  0x0040 }, /* Dingbats (some are emoji) */
+	{ 0x2300,  0x0020 }, /* Enclosed Alphanumeric Supplement */
+	{ 0x1F100, 0x0030 }, /* Enclosed Alphanumeric Supplement */
+	{ 0x1F200, 0x0030 }, /* Enclosed Ideographic Supplement */
+};
+#define EMOJI_RANGE_COUNT ((int)(sizeof(emoji_ranges) / sizeof(emoji_ranges[0])))
+
 static short* font_vertex_buffer;
 static short* font_coords_buffer;
 static enum font_type font_current_type = FONT_FIXEDSYS;
@@ -56,8 +71,10 @@ static enum font_type font_current_type = FONT_FIXEDSYS;
 static void* font_data_fixedsys;
 static void* font_data_smallfnt;
 static void* font_data_fantasy;
+static void* font_data_emoji;
 
 static HashTable fonts_backed;
+static HashTable emoji_fonts_backed;
 
 struct __attribute__((packed)) font_backed_id {
 	enum font_type type;
@@ -84,8 +101,11 @@ void font_init() {
 	CHECK_ALLOCATION_ERROR(font_data_smallfnt)
 	font_data_fantasy  = file_load("fonts/ft88.ttf");
 	CHECK_ALLOCATION_ERROR(font_data_fantasy)
+	font_data_emoji    = file_load("fonts/emoji.ttf");
+	/* emoji.ttf is optional, don't fail if missing */
 
 	ht_setup(&fonts_backed, sizeof(struct font_backed_id), sizeof(struct font_backed_data), 8);
+	ht_setup(&emoji_fonts_backed, sizeof(float), sizeof(struct font_backed_data), 4);
 }
 
 void font_select(enum font_type type) {
@@ -121,6 +141,77 @@ static int font_glyph_index(struct font_backed_data* f, unsigned cp) {
 			return f->range_offset[i] + ((int)cp - first);
 	}
 	return -1;
+}
+
+static int font_is_emoji(unsigned cp) {
+	for(int i = 0; i < EMOJI_RANGE_COUNT; i++) {
+		int first = emoji_ranges[i].first;
+		int cnt   = emoji_ranges[i].count;
+		if((int)cp >= first && (int)cp < first + cnt)
+			return 1;
+	}
+	return 0;
+}
+
+static struct font_backed_data* font_find_emoji(float h) {
+	struct font_backed_data* f_cached = ht_lookup(&emoji_fonts_backed, &h);
+	if(f_cached)
+		return f_cached;
+
+	if(!font_data_emoji)
+		return NULL;
+
+	int total = 0;
+	for(int i = 0; i < EMOJI_RANGE_COUNT; i++) total += emoji_ranges[i].count;
+
+	struct font_backed_data f;
+	f.total_chars = total;
+	f.cdata = malloc(total * sizeof(stbtt_packedchar));
+	CHECK_ALLOCATION_ERROR(f.cdata)
+
+	stbtt_pack_range ranges[EMOJI_RANGE_COUNT];
+	int off = 0;
+	for(int i = 0; i < EMOJI_RANGE_COUNT; i++) {
+		ranges[i].font_size                        = h;
+		ranges[i].first_unicode_codepoint_in_range = emoji_ranges[i].first;
+		ranges[i].array_of_unicode_codepoints      = NULL;
+		ranges[i].num_chars                        = emoji_ranges[i].count;
+		ranges[i].chardata_for_range               = f.cdata + off;
+		f.range_offset[i] = off;
+		off += emoji_ranges[i].count;
+	}
+
+	int max_size = 0;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_size);
+
+	f.w = 512;
+	f.h = 512;
+	void* temp_bitmap = NULL;
+	while(1) {
+		temp_bitmap = realloc(temp_bitmap, f.w * f.h);
+		CHECK_ALLOCATION_ERROR(temp_bitmap)
+		stbtt_pack_context spc;
+		if(!stbtt_PackBegin(&spc, temp_bitmap, f.w, f.h, 0, 1, NULL)) {
+			free(temp_bitmap); free(f.cdata); return NULL;
+		}
+		int ok = stbtt_PackFontRanges(&spc, font_data_emoji, 0, ranges, EMOJI_RANGE_COUNT);
+		stbtt_PackEnd(&spc);
+		if(ok || (f.w >= max_size && f.h >= max_size)) break;
+		if(f.h > f.w) f.w *= 2; else f.h *= 2;
+	}
+
+	log_info("emoji texsize: %i:%ipx [size %f]", f.w, f.h, h);
+
+	glGenTextures(1, &f.texture_id);
+	glBindTexture(GL_TEXTURE_2D, f.texture_id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, f.w, f.h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, temp_bitmap);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	free(temp_bitmap);
+
+	ht_insert(&emoji_fonts_backed, &h, &f);
+	return ht_lookup(&emoji_fonts_backed, &h);
 }
 
 static struct font_backed_data* font_find(float h) {
@@ -206,8 +297,17 @@ float font_length(float h, char* text) {
 		unsigned cp = font_utf8_next(&s);
 		if(cp == 0) break;
 		if(cp == '\n') { length = fmax(length, x); x = 0.0F; continue; }
-		int idx = font_glyph_index(font, cp);
-		if(idx < 0) idx = font_glyph_index(font, '?');
+		
+		int idx = -1;
+		if(font_is_emoji(cp)) {
+			struct font_backed_data* emoji_font = font_find_emoji(h);
+			if(emoji_font)
+				idx = font_glyph_index(emoji_font, cp);
+		} else {
+			idx = font_glyph_index(font, cp);
+			if(idx < 0) idx = font_glyph_index(font, '?');
+		}
+		
 		if(idx >= 0)
 			stbtt_GetPackedQuad(font->cdata, font->w, font->h, idx, &x, &y, &q, 0);
 	}
@@ -223,6 +323,7 @@ bool font_remove_callback(void* key, void* value, void* user) {
 
 void font_reset() {
 	ht_iterate_remove(&fonts_backed, NULL, font_remove_callback);
+	ht_iterate_remove(&emoji_fonts_backed, NULL, font_remove_callback);
 }
 
 void font_render(float x, float y, float h, char* text) {
@@ -233,17 +334,31 @@ void font_render(float x, float y, float h, char* text) {
 	float x2 = x;
 	float y2 = h * 0.75F;
 	const char* s = text;
+	GLuint current_texture = font->texture_id;
+	
 	for(;;) {
 		unsigned cp = font_utf8_next(&s);
 		if(cp == 0) break;
 		if(cp == '\n') { x2 = x; y2 += h; continue; }
 
-		int idx = font_glyph_index(font, cp);
-		if(idx < 0) idx = font_glyph_index(font, '?');
+		int idx = -1;
+		struct font_backed_data* use_font = font;
+		
+		if(font_is_emoji(cp)) {
+			struct font_backed_data* emoji_font = font_find_emoji(h);
+			if(emoji_font) {
+				use_font = emoji_font;
+				idx = font_glyph_index(emoji_font, cp);
+			}
+		} else {
+			idx = font_glyph_index(font, cp);
+			if(idx < 0) idx = font_glyph_index(font, '?');
+		}
+		
 		if(idx < 0) continue;
 
 		stbtt_aligned_quad q;
-		stbtt_GetPackedQuad(font->cdata, font->w, font->h, idx, &x2, &y2, &q, 0);
+		stbtt_GetPackedQuad(use_font->cdata, use_font->w, use_font->h, idx, &x2, &y2, &q, 0);
 
 		font_coords_buffer[k + 0] = q.s0 * 8192.0F;
 		font_coords_buffer[k + 1] = q.t1 * 8192.0F;
