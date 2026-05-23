@@ -78,4 +78,4 @@ jobs:
           files: build/KyroSpades-win64.zip
           body: Automated daily build synced from upstream KyroSpades.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
