@@ -703,8 +703,6 @@ void player_collision(const struct Player* p, Ray* ray, struct player_intersecti
 }
 
 void player_render(struct Player* p, int id) {
-	kv6_calclight(p->pos.x, p->pos.y, p->pos.z);
-
 	int esp_active = (camera_mode == CAMERAMODE_SPECTATOR && settings.esp_in_spec);
 	int obscured = esp_active ? player_is_obscured(p) : 0;
 	int in_view = player_in_view(p);
@@ -729,6 +727,15 @@ void player_render(struct Player* p, int id) {
 				esp_blue = 0;
 				break;
 		}
+	}
+
+	// Disable fog lighting for ESP mode to prevent fog color from tinting players
+	if(esp_active) {
+		glDisable(GL_LIGHTING);
+		glDisable(GL_LIGHT0);
+		glDisable(GL_LIGHT1);
+	} else {
+		kv6_calclight(p->pos.x, p->pos.y, p->pos.z);
 	}
 
 	if(camera_mode == CAMERAMODE_SPECTATOR && p->team != TEAM_SPECTATOR && !cameracontroller_bodyview_mode && settings.show_names_in_spec) {
@@ -978,9 +985,16 @@ void player_render(struct Player* p, int id) {
 		glDisable(GL_DEPTH_TEST);
 	}
 	// Re-enable depth test before rendering held items so they respect occlusion
+	// Held items should NEVER be visible through walls - always keep depth test enabled for them
 	if(esp_active && render_fpv) {
 		glEnable(GL_DEPTH_TEST);
 		glColor4ub(255, 255, 255, 255); // Reset color to white for held items
+	}
+	// Ensure lighting is re-enabled for held items if ESP was active
+	if(esp_active) {
+		glEnable(GL_LIGHTING);
+		glEnable(GL_LIGHT0);
+		kv6_calclight(p->pos.x, p->pos.y, p->pos.z);
 	}
 	switch(p->held_item) {
 		case TOOL_SPADE: kv6_render(&model_spade, p->team); break;
@@ -1001,6 +1015,11 @@ void player_render(struct Player* p, int id) {
 			}
 			break;
 		case TOOL_GRENADE: kv6_render(&model_grenade, p->team); break;
+	}
+	// Restore ESP lighting state after rendering held items
+	if(esp_active) {
+		glDisable(GL_LIGHTING);
+		glDisable(GL_LIGHT0);
 	}
 	// Depth test was already re-enabled before held items, so remove the redundant enable here
 	// if(esp_active && render_fpv) {
