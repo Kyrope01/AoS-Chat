@@ -994,6 +994,7 @@ void player_render(struct Player* p, int id) {
 	if(esp_active) {
 		glEnable(GL_LIGHTING);
 		glEnable(GL_LIGHT0);
+		glEnable(GL_LIGHT1);
 		kv6_calclight(p->pos.x, p->pos.y, p->pos.z);
 	}
 	switch(p->held_item) {
@@ -1020,6 +1021,7 @@ void player_render(struct Player* p, int id) {
 	if(esp_active) {
 		glDisable(GL_LIGHTING);
 		glDisable(GL_LIGHT0);
+		glDisable(GL_LIGHT1);
 	}
 	// Depth test was already re-enabled before held items, so remove the redundant enable here
 	// if(esp_active && render_fpv) {
