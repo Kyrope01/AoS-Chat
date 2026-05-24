@@ -709,6 +709,28 @@ void player_render(struct Player* p, int id) {
 	int obscured = esp_active ? player_is_obscured(p) : 0;
 	int in_view = player_in_view(p);
 
+	// Calculate dark team color for ESP mode when obscured/not in view
+	unsigned char esp_red = 0, esp_green = 0, esp_blue = 0;
+	if(esp_active && (obscured || !in_view)) {
+		switch(p->team) {
+			case TEAM_1:
+				esp_red = gamestate.team_1.red * 0.25F;
+				esp_green = gamestate.team_1.green * 0.25F;
+				esp_blue = gamestate.team_1.blue * 0.25F;
+				break;
+			case TEAM_2:
+				esp_red = gamestate.team_2.red * 0.25F;
+				esp_green = gamestate.team_2.green * 0.25F;
+				esp_blue = gamestate.team_2.blue * 0.25F;
+				break;
+			default:
+				esp_red = 0;
+				esp_green = 0;
+				esp_blue = 0;
+				break;
+		}
+	}
+
 	if(camera_mode == CAMERAMODE_SPECTATOR && p->team != TEAM_SPECTATOR && !cameracontroller_bodyview_mode && settings.show_names_in_spec) {
 		matrix_push(matrix_model);
 		matrix_translate(matrix_model, p->pos.x, p->physics.eye.y + player_height(p) + 1.25F, p->pos.z);
@@ -753,7 +775,7 @@ void player_render(struct Player* p, int id) {
 			matrix_upload();
 			if(esp_active) {
 				if(obscured || !in_view) {
-					glColor3ub(0, 0, 0);
+					glColor3ub(esp_red, esp_green, esp_blue);
 				}
 				glDisable(GL_DEPTH_TEST);
 			}
@@ -815,7 +837,7 @@ void player_render(struct Player* p, int id) {
 	if(render_body) {
 		if(esp_active) {
 			if(obscured || !in_view) {
-				glColor3ub(0, 0, 0);
+				glColor3ub(esp_red, esp_green, esp_blue);
 			}
 			glDisable(GL_DEPTH_TEST);
 		}
@@ -926,7 +948,7 @@ void player_render(struct Player* p, int id) {
 	if(render_arms) {
 		if(esp_active) {
 			if(obscured || !in_view) {
-				glColor3ub(0, 0, 0);
+				glColor3ub(esp_red, esp_green, esp_blue);
 			}
 			glDisable(GL_DEPTH_TEST);
 		}
@@ -947,11 +969,18 @@ void player_render(struct Player* p, int id) {
 	}
 
 	matrix_upload();
+	// Only disable depth test for player body, NOT for held items (block/gun/grenade)
+	// This prevents held items from being visible through walls/players
 	if(esp_active && render_fpv) {
 		if(obscured || !in_view) {
-			glColor3ub(0, 0, 0);
+			glColor3ub(esp_red, esp_green, esp_blue);
 		}
 		glDisable(GL_DEPTH_TEST);
+	}
+	// Re-enable depth test before rendering held items so they respect occlusion
+	if(esp_active && render_fpv) {
+		glEnable(GL_DEPTH_TEST);
+		glColor4ub(255, 255, 255, 255); // Reset color to white for held items
 	}
 	switch(p->held_item) {
 		case TOOL_SPADE: kv6_render(&model_spade, p->team); break;
@@ -973,9 +1002,10 @@ void player_render(struct Player* p, int id) {
 			break;
 		case TOOL_GRENADE: kv6_render(&model_grenade, p->team); break;
 	}
-	if(esp_active && render_fpv) {
-		glEnable(GL_DEPTH_TEST);
-	}
+	// Depth test was already re-enabled before held items, so remove the redundant enable here
+	// if(esp_active && render_fpv) {
+	// 	glEnable(GL_DEPTH_TEST);
+	// }
 
 	vec4 v = {0.1F, 0, -0.3F, 1};
 	matrix_vector(matrix_model, v);
