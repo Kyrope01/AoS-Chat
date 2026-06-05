@@ -4192,6 +4192,7 @@ static void mu_draw_control_frame_inner(mu_Context* ctx, mu_Rect rect, mu_Color 
 
 static void hud_skins_init() {
 	skins_selected_category = 0;
+	skins_preview_cell_count = 0;
 	skins_selected_entry[0] = settings.skin_spade;
 	skins_selected_entry[1] = settings.skin_grenade;
 	skins_selected_entry[2] = settings.skin_rifle;
