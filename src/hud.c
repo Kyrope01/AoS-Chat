@@ -1235,19 +1235,20 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 				glEnable(GL_BLEND);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				glColor4f(r, g, b, 1.F);
-				texture_draw_empty(x_offset, 450 * scalef - y_offset, 300, 24.F);
+				float scoreboard_y = settings.window_height - 150.F * scalef;
+				texture_draw_empty(x_offset, scoreboard_y - y_offset, 300.F * scalef, 24.F * scalef);
 				glColor4f(r * 0.75F, g * 0.75F, b * 0.75F, 0.75F);
-				texture_draw_empty(x_offset, 450 * scalef - y_offset, 300, i == 2 ? (21.F * (count_spec + 1)): height);
+				texture_draw_empty(x_offset, scoreboard_y - y_offset, 300.F * scalef, i == 2 ? (21.F * (count_spec + 1) * scalef): height);
 				glDisable(GL_BLEND);
 
 				glColor3ub(255, 255, 255);
 				if(i != 2) {
-					font_render(x_offset + 300.F - font_length(16.F, score_str), 447 * scalef, 16.0F, score_str);
+					font_render(x_offset + 300.F - font_length(16.F * scalef, score_str), scoreboard_y + 3.F * scalef, 16.0F * scalef, score_str);
 					font_render(x_offset + 4.F,
-							450 * scalef - 4.F, 16.0F, team.name);
+							scoreboard_y - 4.F * scalef, 16.0F * scalef, team.name);
 				} else {
-					font_centered(x_offset + 150.F,
-							450 * scalef - y_offset - 4.F, 16.0F, "Spectator");
+					font_centered(x_offset + 150.F * scalef,
+							scoreboard_y - y_offset - 4.F * scalef, 16.0F * scalef, "Spectator");
 				}
 			}
 
@@ -1262,6 +1263,7 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 			qsort(pt, connected, sizeof(struct player_table), playertable_sort);
 
 			int cntt[3] = {0};
+			float scoreboard_y = settings.window_height - 150.F * scalef;
 			for(int k = 0; k < connected; k++) {
 				int mul = 0;
 				float x_offset;
@@ -1284,8 +1286,8 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 				glEnable(GL_BLEND);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				glColor4f(1.F, 1.F, 1.F, 0.7F);
-				font_render(x_offset + 4.F, 450 * scalef - 6.F - (20 * (cntt[mul - 1] + 1)) - y_offset,
-							16.0F, id_str);
+				font_render(x_offset + 4.F, scoreboard_y - 6.F * scalef - (20.F * scalef * (cntt[mul - 1] + 1)) - y_offset,
+							16.0F * scalef, id_str);
 
 				if(players[pt[k].id].alive) {
 					glColor3f(1.F, 1.F, 1.F);
@@ -1293,13 +1295,13 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 					glColor4f(1.F, 1.F, 1.F, 0.5F);
 				}
 
-				font_render(x_offset + 36.F,
-							450 * scalef - 6.F - (20 * (cntt[mul - 1] + 1)) - y_offset, 16.0F, players[pt[k].id].name);
+				font_render(x_offset + 36.F * scalef,
+							scoreboard_y - 6.F * scalef - (20.F * scalef * (cntt[mul - 1] + 1)) - y_offset, 16.0F * scalef, players[pt[k].id].name);
 				glDisable(GL_BLEND);
 				if(mul != 2) {
 					sprintf(id_str, "%i", pt[k].score);
-					font_render(x_offset + 300.F - font_length(16.F, id_str) - 4.F,
-								450 * scalef - 6.F - (20 * (cntt[mul - 1] + 1)), 16, id_str);
+					font_render(x_offset + 300.F * scalef - font_length(16.F * scalef, id_str) - 4.F * scalef,
+								scoreboard_y - 6.F * scalef - (20.F * scalef * (cntt[mul - 1] + 1)), 16.0F * scalef, id_str);
 				}
 				if(gamestate.gamemode_type == GAMEMODE_CTF
 				   && ((gamestate.gamemode.ctf.team_1_intel
@@ -1307,9 +1309,9 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 					   || (gamestate.gamemode.ctf.team_2_intel
 						   && gamestate.gamemode.ctf.team_2_intel_location.held.player_id == pt[k].id))) {
 					texture_draw(&texture_intel,
-								 x_offset + 300.F - font_length(16.F, id_str) - 4.F - 24.F,
-								 450 * scalef - 6.F - (20 * (cntt[mul - 1] + 1)),
-								 18.0F, 18.0F);
+								 x_offset + 300.F * scalef - font_length(16.F * scalef, id_str) - 4.F * scalef - 24.F * scalef,
+								 scoreboard_y - 6.F * scalef - (20.F * scalef * (cntt[mul - 1] + 1)),
+								 18.0F * scalef, 18.0F * scalef);
 				}
 				cntt[mul - 1]++;
 			}
@@ -1863,7 +1865,7 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 			// large
 			if(window_key_down(WINDOW_KEY_MAP)) {
 				float minimap_x = (settings.window_width - (map_size_x + 1) * scalef) / 2.0F;
-				float minimap_y = ((600 - map_size_z - 1) / 2.0F + map_size_z + 1) * scalef;
+				float minimap_y = (settings.window_height - (map_size_z + 1) * scalef) / 2.0F;
 
 				texture_draw(&texture_minimap, minimap_x, minimap_y, 512 * scalef, 512 * scalef);
 
@@ -1871,9 +1873,9 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 				font_select(FONT_FANTASY);
 				for(int k = 0; k < 8; k++) {
 					c[0] = 'A' + k;
-					font_centered(minimap_x + (64 * k + 32) * scalef, minimap_y + 10.0F * scalef, 10.0F, c);
+					font_centered(minimap_x + (64 * k + 32) * scalef, minimap_y + 10.0F * scalef, 10.0F * scalef, c);
 					c[0] = '1' + k;
-					font_centered(minimap_x - 10, minimap_y - (64 * k + 32 - 4) * scalef, 10.0F, c);
+					font_centered(minimap_x - 10 * scalef, minimap_y - (64 * k + 32 - 4) * scalef, 10.0F * scalef, c);
 				}
 				font_select(FONT_FIXEDSYS);
 
@@ -1981,15 +1983,17 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 					default: glColor3ub(150, 150, 150);
 				}
 				font_select(FONT_FANTASY);
-				hud_font_render_centered(settings.window_width - 77 * scalef, 454 * scalef, 30.F, sector_str, 1.F);
+				float minimap_small_x = settings.window_width - 72.F * scalef;
+				float minimap_small_y = settings.window_height - 65.F * scalef;
+				hud_font_render_centered(minimap_small_x - 5.F * scalef, minimap_small_y + 10.F * scalef, 30.F * scalef, sector_str, 1.F);
 				font_select(FONT_FIXEDSYS);
 
 				glColor3ub(0, 0, 0);
-				texture_draw_empty(settings.window_width - 144 * scalef, 586 * scalef, 130 * scalef, 130 * scalef);
+				texture_draw_empty(minimap_small_x - 72.F * scalef, minimap_small_y - 65.F * scalef, 130.F * scalef, 130.F * scalef);
 				glColor3f(1.0F, 1.0F, 1.0F);
 
-				texture_draw_sector(&texture_minimap, settings.window_width - 143 * scalef, 585 * scalef, 128 * scalef,
-									128 * scalef, (camera_x - half_vp) / 512.0F, (camera_z - half_vp) / 512.0F,
+				texture_draw_sector(&texture_minimap, minimap_small_x - 71.F * scalef, minimap_small_y - 66.F * scalef, 128.F * scalef,
+									128.F * scalef, (camera_x - half_vp) / 512.0F, (camera_z - half_vp) / 512.0F,
 									viewport / 512.0F, viewport / 512.0F);
 
 				tracer_minimap(0, scalef, view_x, view_z, viewport);
