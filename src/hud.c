@@ -1243,12 +1243,12 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
 
 				glColor3ub(255, 255, 255);
 				if(i != 2) {
-					font_render(x_offset + 300.F - font_length(16.F * scalef, score_str), scoreboard_y + 3.F * scalef, 16.0F * scalef, score_str);
+					font_render(x_offset + 300.F - font_length(16.F * settings.ui_font_scale * scalef, score_str), scoreboard_y + 3.F * scalef, 16.0F * settings.ui_font_scale * scalef, score_str);
 					font_render(x_offset + 4.F,
-							scoreboard_y - 4.F * scalef, 16.0F * scalef, team.name);
+							scoreboard_y - 4.F * scalef, 16.0F * settings.ui_font_scale * scalef, team.name);
 				} else {
 					font_centered(x_offset + 150.F * scalef,
-							scoreboard_y - y_offset - 4.F * scalef, 16.0F * scalef, "Spectator");
+							scoreboard_y - y_offset - 4.F * scalef, 16.0F * settings.ui_font_scale * scalef, "Spectator");
 				}
 			}
 
