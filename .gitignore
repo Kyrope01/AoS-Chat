@@ -1,1 +1,19 @@
-(src/hud.c)
+```
+# CMake build artifacts
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Dependencies downloaded by CMake
+_deps/
+
+# Package config files
+*.pc
+
+# Temporary build directories
+src/CMakeFiles/
+```
