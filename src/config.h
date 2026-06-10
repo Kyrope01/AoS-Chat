@@ -85,6 +85,7 @@ extern struct RENDER_OPTIONS {
 	float rifle_ads_fov;
 	float shotgun_ads_fov;
 	float smg_ads_fov;
+	int disable_corpse_despawn;
 	int auto_demo_recording;
 	int player_stats;
 	int player_technical_stats;

@@ -416,6 +416,7 @@ void read_PacketExistingPlayer(void* data, int len) {
 	if(p->player_id < PLAYERS_MAX) {
 		if(!players[p->player_id].connected)
 			printJoinMsg(p->team, p->name);
+		player_save_corpse(p->player_id);
 		player_reset(&players[p->player_id]);
 		players[p->player_id].connected = 1;
 		players[p->player_id].alive = 1;
@@ -438,6 +439,7 @@ void read_PacketCreatePlayer(void* data, int len) {
 	if(p->player_id < PLAYERS_MAX) {
 		if(!players[p->player_id].connected)
 			printJoinMsg(p->team, p->name);
+		player_save_corpse(p->player_id);
 		player_reset(&players[p->player_id]);
 		players[p->player_id].connected = 1;
 		players[p->player_id].alive = 1;
@@ -486,6 +488,7 @@ void read_PacketCreatePlayer(void* data, int len) {
 void read_PacketPlayerLeft(void* data, int len) {
 	struct PacketPlayerLeft* p = (struct PacketPlayerLeft*)data;
 	if(p->player_id < PLAYERS_MAX) {
+		player_save_corpse(p->player_id);
 		players[p->player_id].connected = 0;
 		players[p->player_id].alive = 0;
 		players[p->player_id].score = 0;
@@ -499,6 +502,7 @@ void read_PacketPlayerLeft(void* data, int len) {
 
 void read_PacketMapStart(void* data, int len) {
 	if(demo_is_seeking()) return;
+	player_clear_corpses();
 	// ffs someone fix the wrong map size of 1.5mb
 	if(compressed_chunk_data) {
 		free(compressed_chunk_data);
@@ -663,6 +667,7 @@ void read_PacketKillAction(void* data, int len) {
 		players[p->player_id].alive = 0;
 		players[p->player_id].input.keys.packed = 0;
 		players[p->player_id].input.buttons.packed = 0;
+		player_save_corpse(p->player_id);
 		if(p->player_id != p->killer_id) {
 			players[p->killer_id].score++;
 		}
@@ -1061,6 +1066,7 @@ void network_disconnect() {
 		enet_peer_disconnect(peer, 0);
 		network_connected = 0;
 		network_logged_in = 0;
+		player_clear_corpses();
 		/* Belt-and-braces: the live chat ring belongs to the just-closed
 		   session. server_c also calls chat_clear on the next connect,
 		   but clearing here too prevents any UI that runs in the
@@ -1213,6 +1219,7 @@ int network_update() {
 					event.peer->data = NULL;
 					network_connected = 0;
 					network_logged_in = 0;
+					player_clear_corpses();
 					return 0;
 			}
 		}

@@ -324,6 +324,7 @@ void config_save() {
 	config_setf("client", "rifle_ads_fov", settings.rifle_ads_fov);
 	config_setf("client", "shotgun_ads_fov", settings.shotgun_ads_fov);
 	config_setf("client", "smg_ads_fov", settings.smg_ads_fov);
+	config_seti("client", "disable_corpse_despawn", settings.disable_corpse_despawn);
 	config_seti("client", "disable_dynamic_fov", settings.disable_dynamic_fov);
 	config_seti("client", "textured_blocks", settings.textured_blocks);
 	config_seti("client", "minimap_zoom", settings.minimap_zoom);
@@ -425,6 +426,7 @@ static int config_read_key(void* user, const char* section, const char* name, co
 		IMPORT_SETTING(settings.rifle_ads_fov, rifle_ads_fov, fmaxf(5.0F, fminf(atof(value), CAMERA_DEFAULT_FOV)));
 		IMPORT_SETTING(settings.shotgun_ads_fov, shotgun_ads_fov, fmaxf(5.0F, fminf(atof(value), CAMERA_DEFAULT_FOV)));
 		IMPORT_SETTING(settings.smg_ads_fov, smg_ads_fov, fmaxf(5.0F, fminf(atof(value), CAMERA_DEFAULT_FOV)));
+		IMPORT_SETTING(settings.disable_corpse_despawn, disable_corpse_despawn, atoi(value));
 		IMPORT_SETTING(settings.disable_dynamic_fov, disable_dynamic_fov, atoi(value));
 		IMPORT_SETTING(settings.textured_blocks, textured_blocks, atoi(value));
 		IMPORT_SETTING(settings.minimap_zoom, minimap_zoom, max(1, min(5, atoi(value))));
@@ -1181,6 +1183,16 @@ void config_reload() {
 				 .help = "Enable zoom animation when aiming down sights (ADS)",
 				 .name = "ADS zoom animation",
 				 .category = "Weapon Settings",
+			 });
+
+	list_add(&config_settings,
+			 &(struct config_setting) {
+				 .value = &settings_tmp.disable_corpse_despawn,
+				 .type = CONFIG_TYPE_INT,
+				 .min = 0,
+				 .max = 1,
+				 .help = "Dead player models remain permanently on the map",
+				 .name = "Disable corpse despawn",
 			 });
 
 	list_add(&config_settings,
