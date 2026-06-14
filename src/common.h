@@ -25,8 +25,10 @@
 #include <GL/glew.h>
 #else
 #ifdef USE_SDL
-#include <SDL2/SDL_opengles.h>  /* GLES 1.x — fixed-function pipeline */
-#include <GLES2/gl2.h>           /* GLES 2.0 — FBOs, shaders           */
+#define __gl_h_  /* suppress ES 1.x function decls — our stubs provide them */
+#include <GLES/gl.h>
+#undef __gl_h_
+#include <GLES2/gl2.h>
 #endif
 /* Compatibility shims */
 #define glOrtho(l, r, b, t, n, f)     glOrthof((float)(l), (float)(r), (float)(b), (float)(t), (float)(n), (float)(f))

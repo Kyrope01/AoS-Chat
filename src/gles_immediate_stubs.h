@@ -12,6 +12,8 @@
 #ifdef OPENGL_ES
 #include <dlfcn.h>
 
+extern int gles_version;
+
 /* ── ES 1.x constants that may not be in GLES2 headers ──────────────────── */
 #  ifndef GL_QUADS
 #    define GL_QUADS 0x0007
