@@ -36,13 +36,28 @@
 #include "chunk.h"
 #include "channel.h"
 #include "utils.h"
+/* pthread_spinlock_t is Linux-only. macOS and Android's Bionic lack it.
+   Use a mutex on those platforms; the spinlock is a micro-optimisation
+   that is only relevant on multi-core Linux anyway. */
+#if defined(__linux__) && !defined(__ANDROID__)
+#  define CHUNK_LOCK_T          pthread_spinlock_t
+#  define chunk_lock_init(l)    pthread_spin_init(l, PTHREAD_PROCESS_PRIVATE)
+#  define chunk_lock_lock(l)    pthread_spin_lock(l)
+#  define chunk_lock_unlock(l)  pthread_spin_unlock(l)
+#else
+#  define CHUNK_LOCK_T          pthread_mutex_t
+#  define chunk_lock_init(l)    pthread_mutex_init(l, NULL)
+#  define chunk_lock_lock(l)    pthread_mutex_lock(l)
+#  define chunk_lock_unlock(l)  pthread_mutex_unlock(l)
+#endif
+
 
 struct chunk chunks[CHUNKS_PER_DIM * CHUNKS_PER_DIM];
 
 HashTable chunk_block_queue;
 struct channel chunk_work_queue;
 struct channel chunk_result_queue;
-pthread_spinlock_t chunk_block_queue_lock;
+CHUNK_LOCK_T chunk_block_queue_lock;
 
 int chunk_gen = 0;
 
@@ -82,7 +97,7 @@ void chunk_init() {
 	channel_create(&chunk_result_queue, sizeof(struct chunk_result_packet), CHUNKS_PER_DIM * CHUNKS_PER_DIM);
 	ht_setup(&chunk_block_queue, sizeof(struct chunk*), sizeof(struct chunk_work_packet), 64);
 
-	pthread_spin_init(&chunk_block_queue_lock, PTHREAD_PROCESS_PRIVATE);
+	chunk_lock_init(&chunk_block_queue_lock);
 
 	int chunk_enabled_cores = min(max(window_cpucores() / 2, 1), CHUNK_WORKERS_MAX);
 	log_info("%i cores enabled for chunk generation", chunk_enabled_cores);
@@ -109,15 +124,19 @@ void chunk_render(struct chunk_render_call* c) {
 		matrix_upload();
 
 		if(c->chunk->display_list.has_texcoord) {
+#if !defined(OPENGL_ES)
 			glEnable(GL_TEXTURE_2D);
+#endif
 			glBindTexture(GL_TEXTURE_2D, texture_blocks.texture_id);
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 		}
 
 		glx_displaylist_draw(&c->chunk->display_list, GLX_DISPLAYLIST_NORMAL);
 
-		if(c->chunk->display_list.has_texcoord)
+		if(c->chunk->display_list.has_texcoord) {
+#if !defined(OPENGL_ES)
 			glDisable(GL_TEXTURE_2D);
+#endif
+		}
 
 		matrix_pop(matrix_model);
 	}
@@ -948,14 +967,14 @@ void chunk_rebuild_all() {
 void chunk_block_update(int x, int y, int z) {
 	struct chunk* c = chunks + (x / CHUNK_SIZE) + (z / CHUNK_SIZE) * CHUNKS_PER_DIM;
 
-	pthread_spin_lock(&chunk_block_queue_lock);
+	chunk_lock_lock(&chunk_block_queue_lock);
 	ht_insert(&chunk_block_queue, &c,
 			  &(struct chunk_work_packet) {
 				  .chunk = c,
 				  .chunk_x = c->x,
 				  .chunk_y = c->y,
 			  });
-	pthread_spin_unlock(&chunk_block_queue_lock);
+	chunk_lock_unlock(&chunk_block_queue_lock);
 }
 
 static bool iterate_chunk_updates(void* key, void* value, void* user) {
@@ -965,8 +984,8 @@ static bool iterate_chunk_updates(void* key, void* value, void* user) {
 }
 
 void chunk_queue_blocks() {
-	pthread_spin_lock(&chunk_block_queue_lock);
+	chunk_lock_lock(&chunk_block_queue_lock);
 	ht_iterate(&chunk_block_queue, NULL, iterate_chunk_updates);
 	ht_clear(&chunk_block_queue);
-	pthread_spin_unlock(&chunk_block_queue_lock);
+	chunk_lock_unlock(&chunk_block_queue_lock);
 }

@@ -336,6 +336,7 @@ void config_save() {
 	config_seti("client", "skin_player", settings.skin_player);
 	config_seti("client", "skin_intel", settings.skin_intel);
 	config_seti("client", "skin_tent", settings.skin_tent);
+	config_seti("client", "debug_log", settings.debug_log);
 
 	config_sets("meta", "backend", CONFIG_BACKEND);
 
@@ -378,6 +379,11 @@ static int config_read_key(void* user, const char* section, const char* name, co
 		IMPORT_SETTING(settings.greedy_meshing, greedy_meshing, atoi(value));
 		IMPORT_SETTING(settings.vsync, vsync, atoi(value));
 		IMPORT_SETTING(settings.mouse_sensitivity, mouse_sensitivity, atof(value));
+		/* Migrate configs written while the default was the raw 0.002F
+		   constant; such values are meaningless for the `setting / 5`
+		   formula and would freeze the camera. */
+		if(settings.mouse_sensitivity > 0.0F && settings.mouse_sensitivity < 0.01F)
+			settings.mouse_sensitivity = 5.0F;
 		IMPORT_SETTING(settings.show_news, show_news, atoi(value));
 		if(!strcmp(name, "vol")) { settings.volume = max(min(atoi(value), 10), 0); sound_volume(settings.volume / 10.0F); }
 		IMPORT_SETTING(settings.show_fps, show_fps, atoi(value));
@@ -438,6 +444,7 @@ static int config_read_key(void* user, const char* section, const char* name, co
 		IMPORT_SETTING(settings.skin_player, skin_player, max(0, atoi(value)));
 		IMPORT_SETTING(settings.skin_intel, skin_intel, max(0, atoi(value)));
 		IMPORT_SETTING(settings.skin_tent, skin_tent, max(0, atoi(value)));
+		IMPORT_SETTING(settings.debug_log, debug_log, atoi(value));
 	}
 	if(!strcmp(section, "meta")) {
 		if(!strcmp(name, "backend")) {
@@ -712,8 +719,11 @@ void config_reload() {
 
 	char* s = file_load("config.ini");
 	if(s) {
+		log_debug("Loading config.ini (%zu bytes)", strlen(s));
 		ini_parse_string(s, config_read_key, NULL);
 		free(s);
+	} else {
+		log_debug("No config.ini found, using defaults");
 	}
 
 #ifdef USE_SDL

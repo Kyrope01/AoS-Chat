@@ -107,6 +107,7 @@ extern struct RENDER_OPTIONS {
 	int skin_player;
 	int skin_intel;
 	int skin_tent;
+	int debug_log;
 } settings, settings_tmp;
 
 extern struct list config_keys;

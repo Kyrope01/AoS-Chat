@@ -22,6 +22,7 @@
 #include <math.h>
 
 #include "common.h"
+#include "glx.h"
 #include "file.h"
 #include "hashtable.h"
 #include "font.h"
@@ -238,6 +239,12 @@ void font_render(float x, float y, float h, char* text) {
 		if(cp == 0) break;
 		if(cp == '\n') { x2 = x; y2 += h; continue; }
 
+		/* The vertex/coord buffers hold 2048*8 shorts and we write 12 per glyph.
+		   Without this guard, a long string (more likely on a wide landscape
+		   surface where text wraps less) overruns the buffer and segfaults the
+		   render thread (SEGV_ACCERR). Stop emitting glyphs before that happens. */
+		if(k + 12 > 2048 * 8) break;
+
 		int idx = font_glyph_index(font, cp);
 		if(idx < 0) idx = font_glyph_index(font, '?');
 		if(idx < 0) continue;
@@ -275,10 +282,48 @@ void font_render(float x, float y, float h, char* text) {
 		k += 12;
 	}
 
+#if defined(OPENGL_ES)
+	if(gles_version >= 2) {
+		glx_use_default_shader();
+		glUniform4fv(glGetUniformLocation(glx_default_shader_program(), "u_Color"), 1, gles_current_color);
+		glUniform1f(glGetUniformLocation(glx_default_shader_program(), "u_HasVertexColor"), 0.0F);
+		glUniform1f(glGetUniformLocation(glx_default_shader_program(), "u_TextureEnabled"), 1.0F);
+		/* Font texcoords are baked as 8192x8192; scale down by 1/8192 */
+		glUniform1f(glGetUniformLocation(glx_default_shader_program(), "u_TexCoordScale"), 1.0F / 8192.0F);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, font->texture_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glUniform1i(glGetUniformLocation(glx_default_shader_program(), "u_Texture"), 0);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		glVertexAttribPointer(0, 2, GL_SHORT, GL_FALSE, 0, font_vertex_buffer);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(2, 2, GL_SHORT, GL_FALSE, 0, font_coords_buffer);
+		glEnableVertexAttribArray(2);
+
+		glDrawArrays(GL_TRIANGLES, 0, k / 2);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(2);
+		glDisable(GL_BLEND);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		return;
+	}
+#endif
 	glMatrixMode(GL_TEXTURE);
 	glLoadIdentity();
 	glScalef(1.0F / 8192.0F, 1.0F / 8192.0F, 1.0F);
 	glMatrixMode(GL_MODELVIEW);
+
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+	glActiveTexture(GL_TEXTURE0);
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, font->texture_id);
@@ -308,7 +353,7 @@ void font_render(float x, float y, float h, char* text) {
 
 void font_render_shadow(float x, float y, float h, char* text, float a) {
 	float color[4];
-	glGetFloatv(GL_CURRENT_COLOR, color);
+	glx_get_current_color(color);
 
 	glColor4f(0.F, 0.F, 0.F, a);
 	font_render(x, y - 1.F, h, text);

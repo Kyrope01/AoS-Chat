@@ -18,6 +18,14 @@
 */
 
 #include <time.h>
+#include <sys/stat.h>
+#if defined(USE_SDL) && defined(__ANDROID__)
+#include <SDL_main.h>
+#endif
+#if defined(__ANDROID__)
+#include <unistd.h>   /* chdir */
+#include <SDL.h>      /* SDL_AndroidGet*StoragePath */
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -276,7 +284,7 @@ void display() {
 		glClearColor(fog_color[0], fog_color[1], fog_color[2], fog_color[3]);
 	}
 
-	int needs_postproc = (glx_version && (settings.exposure != 0 || settings.saturation != 0 || settings.contrast != 0 || settings.vignette != 0));
+	int needs_postproc = ((glx_version || gles_version >= 2) && (settings.exposure != 0 || settings.saturation != 0 || settings.contrast != 0 || settings.vignette != 0));
 
 	if(hud_active->render_world || network_connected) {
 		if(needs_postproc) {
@@ -305,7 +313,13 @@ void display() {
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postproc.texture, 0);
 				glGenRenderbuffers(1, &postproc.depth_rb);
 				glBindRenderbuffer(GL_RENDERBUFFER, postproc.depth_rb);
-				glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, settings.window_width, settings.window_height);
+				glRenderbufferStorage(GL_RENDERBUFFER,
+#ifdef OPENGL_ES
+					GL_DEPTH_COMPONENT16,
+#else
+					GL_DEPTH_COMPONENT,
+#endif
+					settings.window_width, settings.window_height);
 				glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, postproc.depth_rb);
 				if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 					glDeleteFramebuffers(1, &postproc.fbo);
@@ -323,6 +337,41 @@ void display() {
 			postproc.h = settings.window_height;
 
 			if(!postproc.shader) {
+#if defined(OPENGL_ES)
+				if(gles_version >= 2) {
+					const char* vert =
+						"attribute vec2 a_Position;\n"
+						"attribute vec2 a_TexCoord;\n"
+						"varying vec2 v_TexCoord;\n"
+						"void main(){\n"
+						"    v_TexCoord = a_TexCoord;\n"
+						"    gl_Position = vec4(a_Position, 0.0, 1.0);\n"
+						"}\n";
+					const char* frag =
+						"precision mediump float;\n"
+						"varying vec2 v_TexCoord;\n"
+						"uniform float exposure;\n"
+						"uniform float saturation;\n"
+						"uniform float contrast;\n"
+						"uniform float vignette;\n"
+						"uniform sampler2D tex;\n"
+						"void main(){\n"
+						"    vec4 c = texture2D(tex, v_TexCoord);\n"
+						"    float e = 1.0 + exposure / 100.0;\n"
+						"    c.rgb *= e;\n"
+						"    float g = dot(c.rgb, vec3(0.299, 0.587, 0.114));\n"
+						"    float s = 1.0 + saturation / 100.0;\n"
+						"    c.rgb = mix(vec3(g), c.rgb, s);\n"
+						"    float ct = 1.0 + contrast / 100.0;\n"
+						"    c.rgb = (c.rgb - 0.5) * ct + 0.5;\n"
+						"    float vig = 1.0 - (vignette / 100.0) * dot(v_TexCoord - 0.5, v_TexCoord - 0.5) * 4.0;\n"
+						"    c.rgb *= clamp(vig, 0.0, 1.0);\n"
+						"    c.rgb = clamp(c.rgb, 0.0, 1.0);\n"
+						"    gl_FragColor = c;\n"
+						"}\n";
+					postproc.shader = glx_shader(vert, frag);
+				} else {
+#endif
 				const char* vert = "void main(){gl_TexCoord[0]=gl_MultiTexCoord0;gl_Position=ftransform();}";
 				const char* frag =
 					"uniform float exposure;"
@@ -344,6 +393,9 @@ void display() {
 					"c.rgb=clamp(c.rgb,0.0,1.0);"
 					"gl_FragColor=c;}";
 				postproc.shader = glx_shader(vert, frag);
+#if defined(OPENGL_ES)
+				}
+#endif
 				if(postproc.shader) {
 					postproc.uni_exposure = glGetUniformLocation(postproc.shader, "exposure");
 					postproc.uni_saturation = glGetUniformLocation(postproc.shader, "saturation");
@@ -606,13 +658,15 @@ void display() {
 				glDisable(GL_FOG);
 
 			if(needs_postproc) {
-				glMatrixMode(GL_PROJECTION);
-				glPushMatrix();
-				glLoadIdentity();
-				glOrtho(0.0, settings.window_width, 0.0, settings.window_height, -1.0, 1.0);
-				glMatrixMode(GL_MODELVIEW);
-				glPushMatrix();
-				glLoadIdentity();
+				mat4 saved_proj2, saved_view2, saved_model2;
+				memcpy(saved_proj2, matrix_projection, sizeof(mat4));
+				memcpy(saved_view2, matrix_view, sizeof(mat4));
+				memcpy(saved_model2, matrix_model, sizeof(mat4));
+				matrix_ortho(matrix_projection, 0.0, settings.window_width, 0.0, settings.window_height, -1.0, 1.0);
+				matrix_identity(matrix_view);
+				matrix_identity(matrix_model);
+				matrix_upload_p();
+				matrix_upload();
 
 				glDisable(GL_DEPTH_TEST);
 				glDepthMask(GL_FALSE);
@@ -633,12 +687,21 @@ void display() {
 					glUniform1f(postproc.uni_contrast, settings.contrast);
 					glUniform1f(postproc.uni_vignette, settings.vignette);
 
+#if defined(OPENGL_ES)
+					if(gles_version >= 2) {
+						glUniform1i(glGetUniformLocation(postproc.shader, "tex"), 0);
+						glx_draw_screen_quad();
+					} else {
+#endif
 					glBegin(GL_QUADS);
 					glTexCoord2f(0.0F, 0.0F); glVertex2f(0.0F, 0.0F);
 					glTexCoord2f(1.0F, 0.0F); glVertex2f((float)settings.window_width, 0.0F);
 					glTexCoord2f(1.0F, 1.0F); glVertex2f((float)settings.window_width, (float)settings.window_height);
 					glTexCoord2f(0.0F, 1.0F); glVertex2f(0.0F, (float)settings.window_height);
 					glEnd();
+#if defined(OPENGL_ES)
+					}
+#endif
 
 					glUseProgram(0);
 				}
@@ -648,11 +711,15 @@ void display() {
 				glClear(GL_DEPTH_BUFFER_BIT);
 				glEnable(GL_DEPTH_TEST);
 
-				glMatrixMode(GL_PROJECTION);
-				glPopMatrix();
-				glMatrixMode(GL_MODELVIEW);
-				glPopMatrix();
+				memcpy(matrix_projection, saved_proj2, sizeof(mat4));
+				memcpy(matrix_view, saved_view2, sizeof(mat4));
+				memcpy(matrix_model, saved_model2, sizeof(mat4));
+				matrix_upload_p();
+				matrix_upload();
 			}
+		}
+		if(needs_postproc && network_map_transfer && postproc.fbo) {
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 	}
 
@@ -674,11 +741,20 @@ void display() {
 		mu_Context* ctx = hud_active->ctx;
 
 		if(ctx) {
-			hud_active->ctx->style->padding = settings.ui_padding;
-			hud_active->ctx->style->spacing = settings.ui_spacing;
-			hud_active->ctx->style->title_height = 24;
-			hud_active->ctx->style->scrollbar_size = 12;
-			hud_active->ctx->style->thumb_size = 8;
+			/* hud_ui_scale() enlarges touch targets so buttons and list rows
+			   aren't a few mm tall on phones. It returns 1.0 on non-Android
+			   builds, so desktop layout is unchanged. */
+			float us = hud_ui_scale();
+			/* Row HEIGHT for height==0 layout rows is style->size.y + padding*2,
+			   so scaling size.y AND padding is what enlarges nav/menu buttons and
+			   list rows. Base values match microui's default_style. */
+			hud_active->ctx->style->size.x = (int)(68 * us);
+			hud_active->ctx->style->size.y = (int)(10 * us);
+			hud_active->ctx->style->padding = (int)(5 * us);
+			hud_active->ctx->style->spacing = (int)(4 * us);
+			hud_active->ctx->style->title_height = (int)(24 * us);
+			hud_active->ctx->style->scrollbar_size = (int)(12 * us);
+			hud_active->ctx->style->thumb_size = (int)(8 * us);
 
 			mu_begin(ctx);
 		}
@@ -687,6 +763,7 @@ void display() {
 
 		if(ctx) {
 			mu_end(ctx);
+			hud_ime_update();
 
 			glEnable(GL_BLEND);
 			glEnable(GL_SCISSOR_TEST);
@@ -759,21 +836,23 @@ void display() {
 			float y = (float)settings.window_height - margin * ease;
 			float alpha = t <= fade_start ? 1.0F : 1.0F - (t - fade_start) / (1.0F - fade_start);
 
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, screenshot_anim.texture);
-			glColor4f(1.0F, 1.0F, 1.0F, alpha);
-			texture_draw_empty(x, y, w, h);
-			glDisable(GL_TEXTURE_2D);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#if !defined(OPENGL_ES)
+		glEnable(GL_TEXTURE_2D);
+#endif
+		glBindTexture(GL_TEXTURE_2D, screenshot_anim.texture);
+		glColor4f(1.0F, 1.0F, 1.0F, alpha);
+		texture_draw_empty(x, y, w, h);
+#if !defined(OPENGL_ES)
+		glDisable(GL_TEXTURE_2D);
+#endif
 			glLineWidth(2.0F);
 			glColor4f(1.0F, 1.0F, 1.0F, alpha);
-			glBegin(GL_LINE_LOOP);
-			glVertex2f(x, y);
-			glVertex2f(x + w, y);
-			glVertex2f(x + w, y - h);
-			glVertex2f(x, y - h);
-			glEnd();
+			glx_draw_line_2d(x, y, x + w, y);
+			glx_draw_line_2d(x + w, y, x + w, y - h);
+			glx_draw_line_2d(x + w, y - h, x, y - h);
+			glx_draw_line_2d(x, y - h, x, y);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glDisable(GL_BLEND);
 		}
@@ -1073,7 +1152,11 @@ int main(int argc, char** argv) {
 	settings.player_arms = 0;
 	settings.fullscreen = 0;
 	settings.greedy_meshing = 0;
-	settings.mouse_sensitivity = MOUSE_SENSITIVITY;
+	/* The look formula is `setting / 5.0F * MOUSE_SENSITIVITY`, so the
+	   neutral value of this setting is 5 — NOT the raw radians/pixel
+	   constant MOUSE_SENSITIVITY (0.002), which would render the camera
+	   effectively frozen. */
+	settings.mouse_sensitivity = 5.0F;
 	settings.show_news = 1;
 	settings.show_fps = 0;
 	settings.volume = 10;
@@ -1103,18 +1186,30 @@ int main(int argc, char** argv) {
 	settings.chat_mention_g = 255;
 	strcpy(settings.name, "DEV_CLIENT");
 
-#ifdef USE_TOUCH
-	mkdir("/sdcard/KyroSpades");
-#else
+#if defined(__ANDROID__)
+	/* The process CWD on Android is "/" (read-only). Switch to the app's
+	   private external storage dir (writable, needs no permission, removed on
+	   uninstall) so every relative write path below resolves correctly. */
+	{
+		const char* base = SDL_AndroidGetExternalStoragePath();
+		if(!base || chdir(base) != 0) {
+			const char* internal = SDL_AndroidGetInternalStoragePath();
+			if(internal) chdir(internal);
+		}
+	}
+#endif
+	/* Create the writable subdirs on every platform. "demos" is included now —
+	   it was never created before, which is why the Demos screen failed. */
 	if(!file_dir_exists("logs"))
 		file_dir_create("logs");
+	if(!file_dir_exists("demos"))
+		file_dir_create("demos");
 	if(!file_dir_exists("cache"))
 		file_dir_create("cache");
 	if(!file_dir_exists("screenshots"))
 		file_dir_create("screenshots");
 	if(!file_dir_exists("vxl"))
 		file_dir_create("vxl");
-#endif
 
 	log_set_level(LOG_INFO);
 
@@ -1130,16 +1225,24 @@ int main(int argc, char** argv) {
 	settings.iron_sight = 1;
 	config_reload();
 
+	if(settings.debug_log) {
+		log_set_level(LOG_TRACE);
+		log_info("Debug logging enabled (LOG_TRACE)");
+	}
+
 	window_init();
 
 #ifndef OPENGL_ES
 	if(glewInit())
 		log_error("Could not load extended OpenGL functions!");
+	else
+		log_debug("GLEW initialized successfully");
 #endif
 
 	log_info("Vendor: %s", glGetString(GL_VENDOR));
 	log_info("Renderer: %s", glGetString(GL_RENDERER));
 	log_info("Version: %s", glGetString(GL_VERSION));
+	log_debug("GLSL: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
 	if(settings.multisamples > 0) {
 		glEnable(GL_MULTISAMPLE);
@@ -1226,6 +1329,17 @@ int main(int argc, char** argv) {
 		}
 
 		display();
+
+		if(network_map_transfer_end) {
+			static float loading_screen_seen_time = 0.0F;
+			if(loading_screen_seen_time == 0.0F)
+				loading_screen_seen_time = window_time();
+			if(window_time() - loading_screen_seen_time >= 0.5F) {
+				network_map_transfer = 0;
+				network_map_transfer_end = 0;
+				loading_screen_seen_time = 0.0F;
+			}
+		}
 
 		sound_update();
 		network_update();

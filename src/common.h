@@ -25,10 +25,25 @@
 #include <GL/glew.h>
 #else
 #ifdef USE_SDL
-#include <SDL2/SDL_opengles.h>
+#include <SDL2/SDL_opengles.h>  /* GLES 1.x — fixed-function pipeline */
+#include <GLES2/gl2.h>           /* GLES 2.0 — FBOs, shaders           */
 #endif
-#define glColor3f(r, g, b) glColor4f(r, g, b, 1.0F)
-#define glColor3ub(r, g, b) glColor4ub(r, g, b, 255)
+/* Compatibility shims */
+#define glOrtho(l, r, b, t, n, f)     glOrthof((float)(l), (float)(r), (float)(b), (float)(t), (float)(n), (float)(f))
+#define glReadBuffer(x) ((void)(x))
+#include "gles_immediate_stubs.h" /* immediate-mode no-ops + ES 2.0 stubs */
+
+/* Color tracking declarations are in glx.h (included by all callers) */
+
+#undef glColor4f
+#undef glColor3f
+#undef glColor3ub
+#undef glColor4ub
+#define glColor4f(r, g, b, a)    glx_set_color4f((r), (g), (b), (a))
+#define glColor3f(r, g, b)       glx_set_color4f((r), (g), (b), 1.0F)
+#define glColor3ub(r, g, b)      glx_set_color4f((r)/255.0F, (g)/255.0F, (b)/255.0F, 1.0F)
+#define glColor4ub(r, g, b, a)   glx_set_color4f((r)/255.0F, (g)/255.0F, (b)/255.0F, (a)/255.0F)
+
 #define glDepthRange(a, b) glDepthRangef(a, b)
 #define glClearDepth(a) glClearDepthf(a)
 #endif
