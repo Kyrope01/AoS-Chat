@@ -317,7 +317,16 @@ void font_render(float x, float y, float h, char* text) {
 #endif
 	glMatrixMode(GL_TEXTURE);
 	glLoadIdentity();
-	glScalef(1.0F / 8192.0F, 1.0F / 8192.0F, 1.0F);
+	{
+		GLfloat s = 1.0F / 8192.0F;
+		GLfloat scale[16] = {
+			s, 0, 0, 0,
+			0, s, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1
+		};
+		glMultMatrixf(scale);
+	}
 	glMatrixMode(GL_MODELVIEW);
 
 	glDisableClientState(GL_COLOR_ARRAY);
