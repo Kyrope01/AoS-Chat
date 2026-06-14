@@ -309,12 +309,43 @@ jobs:
 
       - name: Package game assets into the APK project
         run: |
-          if [ ! -f "$GITHUB_WORKSPACE/package_android_assets.sh" ]; then
-            echo "::error::package_android_assets.sh not found — make sure it is committed to the repo."
-            exit 1
+          set -euo pipefail
+          KS_DIR="$GITHUB_WORKSPACE"
+          ASSETS="$KS_DIR/android/app/src/main/assets"
+
+          [[ -d "$KS_DIR/resources" ]] || { echo "::error::resources/ directory not found"; exit 1; }
+
+          # Download bsresources.zip if missing
+          if [[ ! -f "$KS_DIR/bsresources.zip" ]]; then
+            echo "bsresources.zip not found — downloading ..."
+            curl -L --fail -o "$KS_DIR/bsresources.zip" http://aos.party/bsresources.zip
           fi
-          chmod +x "$GITHUB_WORKSPACE/package_android_assets.sh"
-          "$GITHUB_WORKSPACE/package_android_assets.sh"
+
+          # Clean and rebuild assets
+          rm -rf "$ASSETS"
+          mkdir -p "$ASSETS"
+
+          # 1. Base resources
+          echo "[1/3] Copying resources/ ..."
+          cp -R "$KS_DIR/resources/." "$ASSETS/"
+          rm -f "$ASSETS/icon.rc"
+
+          # 2. bsresources.zip — third-party kv6/png/wav
+          echo "[2/3] Extracting bsresources.zip ..."
+          unzip -o -q "$KS_DIR/bsresources.zip" -d "$ASSETS"
+          find "$ASSETS" -name '.gitignore' -delete
+
+          # 3. Overrides
+          if [[ -d "$KS_DIR/resources.override" ]]; then
+            echo "[3/3] Applying resources.override/ ..."
+            cp -R "$KS_DIR/resources.override/." "$ASSETS/"
+          else
+            echo "[3/3] No resources.override/ — skipping"
+          fi
+
+          echo "Done. Asset tree:"
+          echo "  config.ini : $( [[ -f "$ASSETS/config.ini" ]] && echo present || echo MISSING )"
+          echo "  Total size : $(du -sh "$ASSETS" | cut -f1)"
 
       - name: Cache Gradle
         uses: actions/cache@v4
