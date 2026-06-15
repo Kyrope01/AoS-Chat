@@ -535,11 +535,12 @@ void glx_draw_line_2d(float x1, float y1, float x2, float y2) {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		return;
 	}
-#endif
+#else
 	glBegin(GL_LINES);
 	glVertex2f(x1, y1);
 	glVertex2f(x2, y2);
 	glEnd();
+#endif
 }
 
 void glx_draw_quad_2d(float x, float y, float w, float h) {
@@ -567,13 +568,14 @@ void glx_draw_quad_2d(float x, float y, float w, float h) {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		return;
 	}
-#endif
+#else
 	glBegin(GL_QUADS);
 	glVertex2f(x, y);
 	glVertex2f(x + w, y);
 	glVertex2f(x + w, y - h);
 	glVertex2f(x, y - h);
 	glEnd();
+#endif
 }
 
 /* ── Spherical fog ───────────────────────────────────────────────────────── */
