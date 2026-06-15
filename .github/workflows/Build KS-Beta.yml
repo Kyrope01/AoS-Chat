@@ -67,7 +67,6 @@ jobs:
           sed -i '1s/^/#include <sys\/stat.h>\n/' src/texture.c || true
           sed -i 's/if(entry->d_type == DT_REG || entry->d_type == DT_UNKNOWN) {/struct stat st; char _stat_path[512]; snprintf(_stat_path, sizeof(_stat_path), "%s\/%s", bg_folder, entry->d_name); stat(_stat_path, \&st); if(S_ISREG(st.st_mode)) {/g' src/texture.c || true
           sed -i 's/mkdir(dir_path, 0755)/mkdir(dir_path)/' src/demo.c || true
-          # ← NEW: Add sys/stat.h for skins.c and replace d_type check
           sed -i '1s/^/#include <sys\/stat.h>\n/' src/skins.c || true
           sed -i 's/if(entry->d_type == DT_REG || entry->d_type == DT_UNKNOWN) {/struct stat st; char _stat_path[512]; snprintf(_stat_path, sizeof(_stat_path), "kv6\/%s", entry->d_name); stat(_stat_path, \&st); if(S_ISREG(st.st_mode)) {/g' src/skins.c || true
 
@@ -208,7 +207,7 @@ jobs:
         if: matrix.platform == 'macos'
         run: |
           cd build
-          zip -r "KS macOS Beta.zip" KyroSpades/
+          zip -r "KS MacOS Beta.zip" KyroSpades/
 
       # --- UPLOAD ARTIFACTS ---
       - name: Upload artifact
@@ -309,43 +308,8 @@ jobs:
 
       - name: Package game assets into the APK project
         run: |
-          set -euo pipefail
-          KS_DIR="$GITHUB_WORKSPACE"
-          ASSETS="$KS_DIR/android/app/src/main/assets"
-
-          [[ -d "$KS_DIR/resources" ]] || { echo "::error::resources/ directory not found"; exit 1; }
-
-          # Download bsresources.zip if missing
-          if [[ ! -f "$KS_DIR/bsresources.zip" ]]; then
-            echo "bsresources.zip not found — downloading ..."
-            curl -L --fail -o "$KS_DIR/bsresources.zip" http://aos.party/bsresources.zip
-          fi
-
-          # Clean and rebuild assets
-          rm -rf "$ASSETS"
-          mkdir -p "$ASSETS"
-
-          # 1. Base resources
-          echo "[1/3] Copying resources/ ..."
-          cp -R "$KS_DIR/resources/." "$ASSETS/"
-          rm -f "$ASSETS/icon.rc"
-
-          # 2. bsresources.zip — third-party kv6/png/wav
-          echo "[2/3] Extracting bsresources.zip ..."
-          unzip -o -q "$KS_DIR/bsresources.zip" -d "$ASSETS"
-          find "$ASSETS" -name '.gitignore' -delete
-
-          # 3. Overrides
-          if [[ -d "$KS_DIR/resources.override" ]]; then
-            echo "[3/3] Applying resources.override/ ..."
-            cp -R "$KS_DIR/resources.override/." "$ASSETS/"
-          else
-            echo "[3/3] No resources.override/ — skipping"
-          fi
-
-          echo "Done. Asset tree:"
-          echo "  config.ini : $( [[ -f "$ASSETS/config.ini" ]] && echo present || echo MISSING )"
-          echo "  Total size : $(du -sh "$ASSETS" | cut -f1)"
+          chmod +x package_android_assets.sh
+          ./package_android_assets.sh
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -404,19 +368,20 @@ jobs:
           merge-multiple: true
           path: release-artifacts
 
+      - name: Get date for release tag
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
       - name: Upload as GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: beta
-          name: Latest KS Beta
-          prerelease: true
+          name: KS-Beta
           files: |
             release-artifacts/KS Windows Beta.zip
             release-artifacts/KS Linux Beta.zip
-            release-artifacts/KS macOS Beta.zip
+            release-artifacts/KS MacOS Beta.zip
             release-artifacts/KS Android Beta.apk
-          body: |
-            Latest beta versions of KyroSpades compiled for Windows, Linux, macOS, and Android.
-            This is an unstable pre-release build.
+          body: Latest version of KyroSpades Beta compiled for Windows, Linux, macOS, and Android.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
