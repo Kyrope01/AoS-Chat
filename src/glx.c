@@ -535,6 +535,19 @@ void glx_draw_line_2d(float x1, float y1, float x2, float y2) {
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		return;
 	}
+	{
+		float verts[] = {x1, y1, x2, y2};
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glDisable(GL_TEXTURE_2D);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+		glDisableClientState(GL_NORMAL_ARRAY);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(2, GL_FLOAT, 0, verts);
+		glDrawArrays(GL_LINES, 0, 2);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glEnable(GL_TEXTURE_2D);
+	}
 #else
 	glBegin(GL_LINES);
 	glVertex2f(x1, y1);
@@ -567,6 +580,22 @@ void glx_draw_quad_2d(float x, float y, float w, float h) {
 		glDisableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		return;
+	}
+	{
+		float verts[] = {
+			x, y,        x, y - h,     x + w, y - h,
+			x, y,        x + w, y - h, x + w, y,
+		};
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glDisable(GL_TEXTURE_2D);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+		glDisableClientState(GL_NORMAL_ARRAY);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(2, GL_FLOAT, 0, verts);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glEnable(GL_TEXTURE_2D);
 	}
 #else
 	glBegin(GL_QUADS);
@@ -626,65 +655,4 @@ void glx_enable_sphericalfog() {
 	if(gles_version < 2) {
 		/* ES 1.1: use fixed-function fog/lighting */
 		matrix_push(matrix_model);
-		matrix_identity(matrix_model);
-		matrix_upload();
-		matrix_pop(matrix_model);
-
-		glEnable(GL_LIGHTING);
-		glEnable(GL_LIGHT1);
-		glEnable(GL_COLOR_MATERIAL);
-		float amb[4] = {0.0F, 0.0F, 0.0F, 1.0F};
-		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
-
-		float lpos[4] = {camera_x, (settings.render_distance * map_size_y) / 16.0F, camera_z, 1.0F};
-		glLightfv(GL_LIGHT1, GL_POSITION, lpos);
-		float dir[3] = {0.0F, -1.0F, 0.0F};
-		glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, dir);
-		float dif[4] = {0.0F, 0.0F, 0.0F, 1.0F};
-		glLightfv(GL_LIGHT1, GL_DIFFUSE, dif);
-		float amb2[4] = {1.0F, 1.0F, 1.0F, 1.0F};
-		glLightfv(GL_LIGHT1, GL_AMBIENT, amb2);
-		glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, tan(16.0F / map_size_y) / PI * 180.0F);
-		glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 128.0F);
-		glNormal3f(0.0F, 1.0F, 0.0F);
-		glEnable(GL_FOG);
-		glFogf(GL_FOG_MODE, GL_LINEAR);
-		glFogf(GL_FOG_START, 0.0F);
-		glFogf(GL_FOG_END, settings.render_distance);
-		glFogfv(GL_FOG_COLOR, fog_color);
-	}
-	/* ES 2.0: fog handled by shader — nothing to do here */
-#endif
-	glx_fog = 1;
-}
-
-void glx_disable_sphericalfog() {
-#ifndef OPENGL_ES
-	if(!settings.smooth_fog) {
-		glActiveTexture(GL_TEXTURE1);
-		glDisable(GL_TEXTURE_GEN_T);
-		glDisable(GL_TEXTURE_GEN_S);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		glDisable(GL_TEXTURE_2D);
-		glActiveTexture(GL_TEXTURE0);
-	} else {
-		glDisable(GL_COLOR_MATERIAL);
-		glDisable(GL_LIGHT1);
-		glDisable(GL_LIGHTING);
-		float a[4] = {0.2F, 0.2F, 0.2F, 1.0F};
-		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, a);
-	}
-#elif defined(OPENGL_ES)
-	if(gles_version < 2) {
-		glDisable(GL_FOG);
-		glDisable(GL_COLOR_MATERIAL);
-		glDisable(GL_LIGHT1);
-		glDisable(GL_LIGHTING);
-		float a[4] = {0.2F, 0.2F, 0.2F, 1.0F};
-		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, a);
-	}
-	/* ES 2.0: nothing to undo */
-#endif
-	glx_fog = 0;
-}
+		matrix_i
