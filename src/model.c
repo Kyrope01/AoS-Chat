@@ -677,11 +677,13 @@ void kv6_render(struct kv6_t* kv6, unsigned char team) {
 		if(!glx_version) {
 			glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION, (float[]) {0.0F, 0.0F, 1.0F});
 			glPointSize(1.414F * near_plane_height * kv6->scale * (len_x + len_y + len_z) / 3.0F);
+#ifndef OPENGL_ES
 			glEnable(GL_LIGHTING);
 			glEnable(GL_LIGHT0);
 			glEnable(GL_COLOR_MATERIAL);
 			glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 			glEnable(GL_NORMALIZE);
+#endif
 		}
 
 		if(glx_version) {
