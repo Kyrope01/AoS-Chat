@@ -511,8 +511,8 @@ void kv6_render(struct kv6_t* kv6, unsigned char team) {
 
 			glx_displaylist_draw(kv6->display_list + 0, GLX_DISPLAYLIST_NORMAL);
 
-		if(!kv6->colorize)
 #if !defined(OPENGL_ES)
+		if(!kv6->colorize)
 			glEnable(GL_TEXTURE_2D);
 #endif
 
