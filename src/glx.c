@@ -47,6 +47,7 @@ static GLint loc_u_HasVertexColor = -1;
 static GLint loc_u_TextureEnabled = -1;
 static GLint loc_u_Texture = -1;
 static GLint loc_u_TexCoordScale = -1;
+static GLint loc_u_TeamColor = -1;
 static GLuint quad_vbo = 0;
 static GLuint line_quad_vbo = 0;
 
@@ -58,10 +59,11 @@ static const char* default_vs =
 	"uniform vec4 u_Color;\n"
 	"uniform float u_HasVertexColor;\n"
 	"uniform float u_TexCoordScale;\n"
+	"uniform vec4 u_TeamColor;\n"
 	"varying vec4 v_Color;\n"
 	"varying vec2 v_TexCoord;\n"
 	"void main() {\n"
-	"    v_Color = mix(u_Color, a_Color, u_HasVertexColor);\n"
+	"    v_Color = mix(u_Color, a_Color, u_HasVertexColor) * u_TeamColor;\n"
 	"    v_TexCoord = a_TexCoord * u_TexCoordScale;\n"
 	"    gl_Position = u_MVP * a_Position;\n"
 	"}\n";
@@ -107,6 +109,20 @@ void glx_get_current_color(float* dst) {
 	dst[3] = gles_current_color[3];
 }
 
+void glx_set_team_color(float r, float g, float b) {
+#ifdef OPENGL_ES
+	if(gles_version >= 2) {
+		GLint prog;
+		glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+		if(prog) {
+			GLint loc = glGetUniformLocation(prog, "u_TeamColor");
+			if(loc >= 0)
+				glUniform4f(loc, r, g, b, 1.0F);
+		}
+	}
+#endif
+}
+
 /* ── GL version detection ────────────────────────────────────────────────── */
 
 static int glx_major_ver() {
@@ -130,9 +146,11 @@ void glx_init() {
 			loc_u_TextureEnabled = glGetUniformLocation(default_shader, "u_TextureEnabled");
 			loc_u_Texture = glGetUniformLocation(default_shader, "u_Texture");
 			loc_u_TexCoordScale = glGetUniformLocation(default_shader, "u_TexCoordScale");
+			loc_u_TeamColor = glGetUniformLocation(default_shader, "u_TeamColor");
 			glUseProgram(default_shader);
 			glUniform1i(loc_u_Texture, 0);
 			glUniform4f(loc_u_Color, 1.0F, 1.0F, 1.0F, 1.0F);
+			glUniform4f(loc_u_TeamColor, 1.0F, 1.0F, 1.0F, 1.0F);
 			glUniform1f(loc_u_HasVertexColor, 0.0F);
 			glUniform1f(loc_u_TextureEnabled, 0.0F);
 			glUniform1f(loc_u_TexCoordScale, 1.0F);
