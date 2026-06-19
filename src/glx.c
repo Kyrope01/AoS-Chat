@@ -52,6 +52,7 @@ static GLuint quad_vbo = 0;
 static GLuint line_quad_vbo = 0;
 
 static const char* default_vs =
+	"precision highp float;\n"
 	"attribute vec4 a_Position;\n"
 	"attribute vec4 a_Color;\n"
 	"attribute vec2 a_TexCoord;\n"
@@ -111,14 +112,8 @@ void glx_get_current_color(float* dst) {
 
 void glx_set_team_color(float r, float g, float b) {
 #ifdef OPENGL_ES
-	if(gles_version >= 2) {
-		GLint prog;
-		glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
-		if(prog) {
-			GLint loc = glGetUniformLocation(prog, "u_TeamColor");
-			if(loc >= 0)
-				glUniform4f(loc, r, g, b, 1.0F);
-		}
+	if(gles_version >= 2 && loc_u_TeamColor >= 0) {
+		glUniform4f(loc_u_TeamColor, r, g, b, 1.0F);
 	}
 #endif
 }
@@ -175,16 +170,19 @@ int glx_shader(const char* vertex, const char* fragment) {
 		return 0;
 #endif
 	int v = 0, f = 0;
+	GLint ok;
+
 	if(vertex) {
 		v = glCreateShader(GL_VERTEX_SHADER);
 		glShaderSource(v, 1, (const GLchar* const*)&vertex, NULL);
 		glCompileShader(v);
-		GLint ok;
 		glGetShaderiv(v, GL_COMPILE_STATUS, &ok);
 		if(!ok) {
 			char log[1024];
 			glGetShaderInfoLog(v, sizeof(log), NULL, log);
 			log_error("Vertex shader compile error: %s", log);
+			glDeleteShader(v);
+			return 0;
 		}
 	}
 
@@ -192,12 +190,14 @@ int glx_shader(const char* vertex, const char* fragment) {
 		f = glCreateShader(GL_FRAGMENT_SHADER);
 		glShaderSource(f, 1, (const GLchar* const*)&fragment, NULL);
 		glCompileShader(f);
-		GLint ok;
 		glGetShaderiv(f, GL_COMPILE_STATUS, &ok);
 		if(!ok) {
 			char log[1024];
 			glGetShaderInfoLog(f, sizeof(log), NULL, log);
 			log_error("Fragment shader compile error: %s", log);
+			if(v) glDeleteShader(v);
+			glDeleteShader(f);
+			return 0;
 		}
 	}
 
@@ -212,12 +212,15 @@ int glx_shader(const char* vertex, const char* fragment) {
 	glBindAttribLocation(program, 3, "a_Normal");
 	glLinkProgram(program);
 
-	GLint linked;
-	glGetProgramiv(program, GL_LINK_STATUS, &linked);
-	if(!linked) {
+	glGetProgramiv(program, GL_LINK_STATUS, &ok);
+	if(!ok) {
 		char log[1024];
 		glGetProgramInfoLog(program, sizeof(log), NULL, log);
 		log_error("Shader link error: %s", log);
+		glDeleteProgram(program);
+		if(v) glDeleteShader(v);
+		if(f) glDeleteShader(f);
+		return 0;
 	}
 
 	if(v) glDeleteShader(v);

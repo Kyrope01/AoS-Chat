@@ -497,12 +497,12 @@ void kv6_render(struct kv6_t* kv6, unsigned char team) {
 			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, GL_SRC_ALPHA);
 			glBindTexture(GL_TEXTURE_2D, texture_dummy.texture_id);
 
-		if(kv6->colorize) {
+			if(kv6->colorize) {
 #if !defined(OPENGL_ES)
-			glEnable(GL_TEXTURE_2D);
+				glEnable(GL_TEXTURE_2D);
 #endif
-			glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, (float[]) {kv6->red, kv6->green, kv6->blue, 1.0F});
-		}
+				glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, (float[]) {kv6->red, kv6->green, kv6->blue, 1.0F});
+			}
 
 			matrix_push(matrix_model);
 			matrix_scale3(matrix_model, kv6->scale);
@@ -512,8 +512,8 @@ void kv6_render(struct kv6_t* kv6, unsigned char team) {
 			glx_displaylist_draw(kv6->display_list + 0, GLX_DISPLAYLIST_NORMAL);
 
 #if !defined(OPENGL_ES)
-		if(!kv6->colorize)
-			glEnable(GL_TEXTURE_2D);
+			if(!kv6->colorize)
+				glEnable(GL_TEXTURE_2D);
 #endif
 
 			switch(team) {
