@@ -112,8 +112,14 @@ void glx_get_current_color(float* dst) {
 
 void glx_set_team_color(float r, float g, float b) {
 #ifdef OPENGL_ES
-	if(gles_version >= 2 && loc_u_TeamColor >= 0) {
-		glUniform4f(loc_u_TeamColor, r, g, b, 1.0F);
+	if(gles_version >= 2) {
+		GLint prog;
+		glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+		if(prog) {
+			GLint loc = glGetUniformLocation(prog, "u_TeamColor");
+			if(loc >= 0)
+				glUniform4f(loc, r, g, b, 1.0F);
+		}
 	}
 #endif
 }

@@ -497,6 +497,13 @@ void kv6_render(struct kv6_t* kv6, unsigned char team) {
 			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA, GL_SRC_ALPHA);
 			glBindTexture(GL_TEXTURE_2D, texture_dummy.texture_id);
 
+#if defined(OPENGL_ES)
+			if(gles_version < 2) {
+				glEnable(GL_TEXTURE_2D);
+				glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_COLOR, (float[]) {1.0F, 1.0F, 1.0F, 1.0F});
+			}
+#endif
+
 			if(kv6->colorize) {
 #if !defined(OPENGL_ES)
 				glEnable(GL_TEXTURE_2D);
