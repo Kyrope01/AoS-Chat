@@ -1260,17 +1260,6 @@ void config_reload() {
 
 	list_add(&config_settings,
 			 &(struct config_setting) {
-				 .value = &settings_tmp.minimap_zoom,
-				 .type = CONFIG_TYPE_INT,
-				 .min = 1,
-				 .max = 5,
-				 .help = "Minimap zoom level (1-5)",
-				 .name = "Minimap zoom",
-				 .category = "HUD/UI Settings",
-			 });
-
-	list_add(&config_settings,
-			 &(struct config_setting) {
 				 .value = &settings_tmp.rain,
 				 .type = CONFIG_TYPE_INT,
 				 .min = 0,
