@@ -4335,7 +4335,6 @@ static void hud_serverlist_render(mu_Context* ctx, float scalex, float scaley) {
 
                 mu_end_window(ctx);
         }
-}
 
         if(window_time() - chat_popup_timer < chat_popup_duration
            && mu_begin_window_ex(ctx, "Disconnected from server", mu_rect(200, 250, 300, 100),
