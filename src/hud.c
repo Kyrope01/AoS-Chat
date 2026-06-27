@@ -3936,6 +3936,39 @@ static void hud_nav_button(mu_Context* ctx, struct hud* hud_struct, const char* 
         }
 }
 
+/* Left-side vertical navigation for serverlist screen */
+static void hud_serverlist_nav(mu_Context* ctx, float scalex, float scaley) {
+        /* Build nav entries in DRAW order (Exit at the end) */
+        const char* labels[6];
+        int n = 0;
+        labels[n++] = "Settings";
+        labels[n++] = "Controls";
+        labels[n++] = "Skins";
+        labels[n++] = "Demos";
+        if(serverlist_is_outdated) { labels[n++] = "New updates"; }
+        labels[n++] = "Exit";
+
+        mu_layout_row(ctx, 1, (int[]) {-1}, 0);
+
+        hud_nav_button(ctx, &hud_settings, "Settings");
+        hud_nav_button(ctx, &hud_controls, "Controls");
+        hud_nav_button(ctx, &hud_skins, "Skins");
+        hud_nav_button(ctx, &hud_demolist, "Demos");
+
+        if(serverlist_is_outdated) {
+                mu_text_color(ctx, 255, 255, 60);
+                if(mu_button(ctx, "New updates")) {
+                        show_update_popup = 1;
+                }
+                mu_text_color_default(ctx);
+        }
+
+        mu_text_color(ctx, 255, 60, 60);
+        if(mu_button(ctx, "Exit"))
+                exit(0);
+        mu_text_color_default(ctx);
+}
+
 static void hud_common_nav(mu_Context* ctx, mu_Rect* frame, float scalex, float scaley) {
         mu_Container* cnt = mu_get_current_container(ctx);
         cnt->rect = *frame;
@@ -4042,15 +4075,20 @@ static void hud_common_nav(mu_Context* ctx, mu_Rect* frame, float scalex, float 
 static void hud_serverlist_render(mu_Context* ctx, float scalex, float scaley) {
         hud_common_render(ctx);
 
-        /* Widened from a 1024px cap / 75% of the window: on wide phone/tablet
-           screens the old cap left the list covering only ~half the screen and
-           squeezed the nav row. Kept conservative on purpose. */
-        float frame_w = fminf(1280.F, settings.window_width * 0.8F);
-        mu_Rect frame = mu_rect(settings.window_width / 2.F - frame_w / 2.F, 0, frame_w, settings.window_height);
+        /* Serverlist takes full width; left nav panel will be rendered inside */
+        mu_Rect frame = mu_rect(0, 0, settings.window_width, settings.window_height);
 
         if(mu_begin_window_ex(ctx, "Main", frame, MU_OPT_NOFRAME | MU_OPT_NOTITLE | MU_OPT_NORESIZE)) {
-                hud_common_nav(ctx, &frame, scalex, scaley);
+                /* Two-column layout: left nav (fixed width), right serverlist content (remaining) */
+                mu_layout_row(ctx, 2, (int[]) {180, -1}, -1);
 
+                /* Left navigation panel */
+                mu_begin_panel(ctx, "Nav");
+                hud_serverlist_nav(ctx, scalex, scaley);
+                mu_end_panel(ctx);
+
+                /* Right side: serverlist content */
+                mu_begin_panel(ctx, "ServerList");
                 mu_layout_row(ctx, 1, (int[]) {-1}, settings.window_height * 0.3F);
 
                 if(serverlist_news_exists && settings.show_news) {
@@ -4297,6 +4335,7 @@ static void hud_serverlist_render(mu_Context* ctx, float scalex, float scaley) {
 
                 mu_end_window(ctx);
         }
+}
 
         if(window_time() - chat_popup_timer < chat_popup_duration
            && mu_begin_window_ex(ctx, "Disconnected from server", mu_rect(200, 250, 300, 100),
