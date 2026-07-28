@@ -311,6 +311,7 @@ void config_save() {
         config_setf("client", "chat_shadow", settings.chat_shadow);
         config_seti("client", "chat_flip_on_open", settings.chat_flip_on_open);
         config_seti("client", "show_player_arms", settings.player_arms);
+        config_seti("client", "camera_movement", settings.camera_movement);
         config_seti("client", "chat_spacing", settings.chat_spacing);
         config_sets("client", "chat_mention_words", settings.chat_mention_words);
         config_seti("client", "chat_mention_r", settings.chat_mention_r);
@@ -365,7 +366,6 @@ void config_save() {
         config_seti("client", "replay_duration", settings.replay_duration);
         config_seti("client", "replay_save_hotkey", settings.replay_save_hotkey);
         config_sets("client", "audio_monitor_source", settings.audio_monitor_source);
-        config_seti("client", "performance_mode", settings.performance_mode);
 
         config_sets("meta", "backend", CONFIG_BACKEND);
 
@@ -440,6 +440,7 @@ static int config_read_key(void* user, const char* section, const char* name, co
                 IMPORT_SETTING(settings.chat_shadow, chat_shadow, fmax(0, fmin(1.f, atof(value))));
                 IMPORT_SETTING(settings.chat_flip_on_open, chat_flip_on_open, atoi(value));
                 IMPORT_SETTING(settings.player_arms, show_player_arms, atoi(value));
+IMPORT_SETTING(settings.camera_movement, camera_movement, atoi(value));
                 IMPORT_SETTING(settings.chat_spacing, chat_spacing, atoi(value));
                 IMPORT_SETTING_STR(settings.chat_mention_words, chat_mention_words);
                 IMPORT_SETTING(settings.chat_mention_r, chat_mention_r, max(0, min(255, atoi(value))));
@@ -519,7 +520,6 @@ static int config_read_key(void* user, const char* section, const char* name, co
                 IMPORT_SETTING(settings.replay_duration, replay_duration, atoi(value));
                 IMPORT_SETTING(settings.replay_save_hotkey, replay_save_hotkey, atoi(value));
                 IMPORT_SETTING_STR(settings.audio_monitor_source, audio_monitor_source);
-                IMPORT_SETTING(settings.performance_mode, performance_mode, atoi(value));
         }
         if(!strcmp(section, "meta")) {
                 if(!strcmp(name, "backend")) {
@@ -857,15 +857,6 @@ void config_reload() {
         else
                 list_clear(&config_settings);
 
-        list_add(&config_settings,
-                         &(struct config_setting) {
-                                 .value = &settings_tmp.performance_mode,
-                                 .type = CONFIG_TYPE_INT,
-                                 .min = 0,
-                                 .max = 1,
-                                 .help = "Disable heavy visual effects for insane FPS",
-                                 .name = "Performance Mode",
-                         });
         list_add(&config_settings,
                          &(struct config_setting) {
                                  .value = settings_tmp.name,

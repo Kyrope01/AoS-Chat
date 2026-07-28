@@ -273,7 +273,7 @@ void drawScene() {
 
         water_render();
 
-        if(settings.smooth_fog && !settings.performance_mode) {
+        if(settings.smooth_fog) {
 #ifdef OPENGL_ES
                 glFogx(GL_FOG_MODE, GL_EXP2);
 #else
@@ -287,23 +287,10 @@ void drawScene() {
         glShadeModel(GL_FLAT);
         kv6_calclight(-1, -1, -1);
         matrix_upload();
-        /* Performance Mode: skip particle/tracer/damaged-voxel rendering.
-           - particle_render iterates the entire particle entity system and
-             tessellates every alive particle into a vertex buffer per frame.
-           - tracer_render iterates the tracer entity system and does a kv6
-             render call per active tracer.
-           - map_damaged_voxels_render iterates the damage hashtable, rebuilds
-             a tesselator, and issues a draw call (every frame).
-           All three are pure visual; gameplay (hitreg, grenade physics) is
-           unaffected. */
-        if(!settings.performance_mode) {
-                particle_render();
-                tracer_render();
-                grenade_render();
-                map_damaged_voxels_render();
-        } else {
-                grenade_render();
-        }
+        particle_render();
+        tracer_render();
+        grenade_render();
+        map_damaged_voxels_render();
         matrix_upload();
 
         if(gamestate.gamemode_type == GAMEMODE_CTF) {
@@ -411,16 +398,13 @@ void display() {
 
         /* Treat near-zero slider values as OFF: the on-screen sliders can't
            always land exactly on 0 (touch precision), and a visually-nil
-           post-process pass would otherwise keep running.
-           Performance Mode force-disables the entire post-process pipeline
-           (FBO copy + shader pass + blit), one of the heaviest per-frame ops. */
-        int needs_postproc = !settings.performance_mode
-                              && (glx_version || gles_version >= 2)
+           post-process pass would otherwise keep running. */
+        int needs_postproc = ((glx_version || gles_version >= 2)
                               && (settings.exposure < -0.5F || settings.exposure > 0.5F
                                   || settings.saturation < -0.5F || settings.saturation > 0.5F
                                   || settings.contrast < -0.5F || settings.contrast > 0.5F
                                   || settings.vignette > 0.5F || settings.volumetric_light || settings.lens_flare
-                                  || settings.chromatic_aberration || settings.filmic_tonemapping);
+                                  || settings.chromatic_aberration || settings.filmic_tonemapping));
 
         if(hud_active->render_world || network_connected) {
                 /* Per-frame backup re-capture, in case SDL recreated the FBO mid-run
@@ -1079,7 +1063,7 @@ void display() {
                            Previously this was drawn AFTER the scene with GL_FLAT shade
                            model still active, which made per-vertex colors not
                            interpolate — the entire quad rendered as fog_color (invisible). */
-                        if(settings.sky_gradient && !settings.performance_mode) {
+                        if(settings.sky_gradient) {
                                 glMatrixMode(GL_PROJECTION);
                                 glPushMatrix();
                                 glLoadIdentity();
@@ -1302,7 +1286,8 @@ void display() {
                                 if(players[local_player_id].input.buttons.rmb)
                                         players[local_player_id].input.buttons.rmb_start = window_time() + 0.5F;
                                 players[local_player_id].input.buttons.rmb = 0;
-                        } else {
+                        }
+                        if(1) {
                                 if(hud_active->render_localplayer) {
                                         float tmp2 = players[local_player_id].physics.eye.y;
                                         players[local_player_id].physics.eye.y = last_cy;
@@ -2155,7 +2140,8 @@ int main(int argc, char** argv) {
         settings.spectator_fog_distance = 128.0F;
         settings.window_width = 800;
         settings.window_height = 600;
-        settings.player_arms = 0;
+        settings.player_arms = 1;
+        settings.camera_movement = 0;
         settings.fullscreen = 0;
         settings.greedy_meshing = 0;
         /* The look formula is `setting / 5.0F * MOUSE_SENSITIVITY`, so the
@@ -2199,7 +2185,6 @@ int main(int argc, char** argv) {
         settings.chromatic_aberration = 0;
         settings.chromatic_aberration_strength = 1.5F;
         settings.filmic_tonemapping = 1;
-        settings.performance_mode = 0;
         settings.chat_mention_r = 255;
         settings.chat_mention_g = 255;
         strcpy(settings.name, "DEV_CLIENT");
@@ -2367,14 +2352,8 @@ int main(int argc, char** argv) {
                         if(!demo_is_frozen())
                                 player_update(step, 0);
                         camera_update(step);
-                        /* Performance Mode: skip tracer/particle update since
-                           we're not rendering them anyway. This avoids the
-                           entitysys_iterate cost (per-entity callback dispatch)
-                           every frame. */
-                        if(!settings.performance_mode) {
-                                tracer_update(step);
-                                particle_update(step);
-                        }
+                        tracer_update(step);
+                        particle_update(step);
                         if(settings.rain) {
                                 particle_create_rain();
                         }
@@ -2485,17 +2464,9 @@ int main(int argc, char** argv) {
                  network_update();
                  window_update();
  
-                 /* Performance Mode: skip Discord RPC update — iterates
-                    PLAYERS_MAX (32) every frame and re-mashes the presence
-                    struct. Pure cosmetic, no gameplay impact. */
-                 if(!settings.performance_mode)
-                         rpc_update();
+                 rpc_update();
  
-                 /* Performance Mode: skip the FPS limiter entirely so the loop
-                    runs uncapped (vsync still respected if user enabled it). */
-                 if(!settings.performance_mode
-                    && settings.vsync > 1
-                    && (window_time() - last_frame_start) < (1.0 / settings.vsync)) {
+                 if(settings.vsync > 1 && (window_time() - last_frame_start) < (1.0 / settings.vsync)) {
                          double sleep_s = 1.0 / settings.vsync - (window_time() - last_frame_start);
                          struct timespec ts;
                          ts.tv_sec = (int)sleep_s;

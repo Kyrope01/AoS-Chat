@@ -149,17 +149,10 @@ void chunk_draw_visible() {
         struct chunk_render_call chunks_draw[CHUNKS_PER_DIM * CHUNKS_PER_DIM * 2];
         int index = 0;
 
-        /* Performance Mode: cap effective render distance at 80 blocks
-           (default is 128). Fewer visible chunks = less geometry, fewer
-           draw calls, smaller water span, tighter particle cull radius.
-           User's saved render_distance value is NOT modified. */
-        float effective_rd = settings.performance_mode
-                              ? fminf(settings.render_distance, 80.0F)
-                              : settings.render_distance;
-        int overshoot = (effective_rd + CHUNK_SIZE - 1) / CHUNK_SIZE + 1;
+        int overshoot = (settings.render_distance + CHUNK_SIZE - 1) / CHUNK_SIZE + 1;
 
         // hoisted: was a libm pow() call inside the double loop, every frame
-        float rd = effective_rd + 1.414F * CHUNK_SIZE;
+        float rd = settings.render_distance + 1.414F * CHUNK_SIZE;
         float rd_sq = rd * rd;
 
         // go through all possible chunks and store all in range and view
@@ -186,12 +179,8 @@ void chunk_draw_visible() {
 
         // sort near→far: chunks are opaque, so drawing front-first lets
         // early-z reject occluded fragments (correct — do NOT reverse for "transparency",
-        // water is rendered separately).
-        // Performance Mode: skip the qsort — with render_distance capped at 80
-        // there are far fewer chunks, the overdraw cost is lower, and qsort's
-        // per-comparison function-pointer call adds up at insane FPS.
-        if(!settings.performance_mode)
-                qsort(chunks_draw, index, sizeof(struct chunk_render_call), chunk_sort);
+        // water is rendered separately)
+        qsort(chunks_draw, index, sizeof(struct chunk_render_call), chunk_sort);
 
         for(int k = 0; k < index; k++)
                 chunk_render(chunks_draw + k);
@@ -235,26 +224,18 @@ void* chunk_generate(void* data) {
                 result.chunk = work.chunk;
                 result.gen = work.chunk->gen;
                 result.minimap_data = malloc(CHUNK_SIZE * CHUNK_SIZE * sizeof(uint32_t));
-                /* Performance Mode: force greedy meshing, disable textured_blocks
-                   and ambient_occlusion. Greedy meshing collapses coplanar faces
-                   so the GPU uploads far fewer vertices per chunk; textured_blocks
-                   adds an extra UV channel per vertex; AO adds a 3x3x3 neighbor
-                   sample per block during meshing (massive CPU cost). */
-                int perf_textured = settings.textured_blocks && !settings.performance_mode;
-                int perf_greedy = settings.greedy_meshing || settings.performance_mode;
-                int perf_ao = settings.ambient_occlusion && !settings.performance_mode;
-                tesselator_create(&result.tesselator, VERTEX_INT, 0, perf_textured);
+                tesselator_create(&result.tesselator, VERTEX_INT, 0, settings.textured_blocks);
 
                 struct libvxl_chunk_copy blocks;
                 map_copy_blocks(&blocks, work.chunk_x * CHUNK_SIZE, work.chunk_y * CHUNK_SIZE);
 
-                if(perf_textured) {
+                if(settings.textured_blocks) {
                         chunk_generate_textured(&blocks, &result.tesselator, &result.max_height);
-                } else if(perf_greedy)
+                } else if(settings.greedy_meshing)
                         chunk_generate_greedy(&blocks, work.chunk_x * CHUNK_SIZE, work.chunk_y * CHUNK_SIZE, &result.tesselator,
                                                                   &result.max_height);
                 else
-                        chunk_generate_naive(&blocks, &result.tesselator, &result.max_height, perf_ao);
+                        chunk_generate_naive(&blocks, &result.tesselator, &result.max_height, settings.ambient_occlusion);
 
                 // use the fact that libvxl orders libvxl_blocks by top-down coordinate first in its data structure
                 size_t chunk_x = work.chunk_x * CHUNK_SIZE;
@@ -633,10 +614,6 @@ static __attribute__((always_inline)) inline int vertexAO_idx(int side1, int sid
 
 void chunk_generate_naive(struct libvxl_chunk_copy* blocks, struct tesselator* tess, int* max_height, int ao) {
         *max_height = 0;
-        /* Performance Mode: ao is already forced OFF by chunk_generate()
-           (perf_ao = false), and shadow_quality is force-OFF here so the
-           expensive map_sun_shadow raycast per block is skipped. */
-        int perf_shadow = settings.shadow_quality && !settings.performance_mode;
         float ao_mult = settings.ao_multiplier > 0.0F ? settings.ao_multiplier : 1.0F;
         float ao_curve[5];
         ao_curve[1] = powf(0.25F, ao_mult);
@@ -644,7 +621,7 @@ void chunk_generate_naive(struct libvxl_chunk_copy* blocks, struct tesselator* t
         ao_curve[3] = powf(0.75F, ao_mult);
         ao_curve[4] = 1.0F;
 
-        if(perf_shadow)
+        if(settings.shadow_quality)
                 map_read_lock();
 
         for(size_t k = 0; k < blocks->blocks_sorted_count; k++) {
@@ -665,7 +642,7 @@ void chunk_generate_naive(struct libvxl_chunk_copy* blocks, struct tesselator* t
                 int b = red(col);
 
                 float shade = solid_sunblock(blocks, x, y, z);
-                if(perf_shadow) {
+                if(settings.shadow_quality) {
                         float dir_shade = map_sun_shadow(x, y, z, 32);
                         float sf = (1.0F - settings.shadow_intensity) + settings.shadow_intensity * dir_shade;
                         shade *= sf;
@@ -819,7 +796,7 @@ void chunk_generate_naive(struct libvxl_chunk_copy* blocks, struct tesselator* t
                 }
         }
 
-        if(perf_shadow)
+        if(settings.shadow_quality)
                 map_read_unlock();
 }
 
@@ -856,9 +833,8 @@ static void emit_textured_face(struct tesselator* tess, enum tesselator_cube_fac
 
 void chunk_generate_textured(struct libvxl_chunk_copy* blocks, struct tesselator* tess, int* max_height) {
         *max_height = 0;
-        int perf_shadow = settings.shadow_quality && !settings.performance_mode;
 
-        if(perf_shadow)
+        if(settings.shadow_quality)
                 map_read_lock();
 
         for(size_t k = 0; k < blocks->blocks_sorted_count; k++) {
@@ -880,7 +856,7 @@ void chunk_generate_textured(struct libvxl_chunk_copy* blocks, struct tesselator
 
                 {
                         float shade = solid_sunblock(blocks, x, y, z);
-                        if(perf_shadow) {
+                        if(settings.shadow_quality) {
                                 float dir_shade = map_sun_shadow(x, y, z, 32);
                                 float sf = (1.0F - settings.shadow_intensity) + settings.shadow_intensity * dir_shade;
                                 shade *= sf;
@@ -932,7 +908,7 @@ void chunk_generate_textured(struct libvxl_chunk_copy* blocks, struct tesselator
                 }
         }
 
-        if(perf_shadow)
+        if(settings.shadow_quality)
                 map_read_unlock();
 
         (*max_height)++;
@@ -940,17 +916,7 @@ void chunk_generate_textured(struct libvxl_chunk_copy* blocks, struct tesselator
 
 void chunk_update_all() {
         float start = window_time();
-        /* Performance Mode: shrink the per-frame chunk-mesh upload budget
-           from 6ms to 2ms (50ms during bulk load stays the same — that's
-           the initial map load and we want it to finish fast). This gives
-           the render thread more time per frame for actual drawing. */
-        float budget;
-        if(chunk_bulk_pending > 0)
-                budget = 0.050F;
-        else if(settings.performance_mode)
-                budget = 0.002F;
-        else
-                budget = 0.006F;
+        float budget = (chunk_bulk_pending > 0) ? 0.050F : 0.006F;
 
         struct chunk_result_packet result;
 
@@ -970,15 +936,10 @@ void chunk_update_all() {
 
                         tesselator_glx(&result.tesselator, &result.chunk->display_list);
 
-                        /* Performance Mode: skip minimap texture upload — saves a
-                           glTexSubImage2D (host→GPU upload) per rebuilt chunk.
-                           Minimap will show stale tiles until perf mode is off. */
-                        if(!settings.performance_mode) {
-                                glBindTexture(GL_TEXTURE_2D, texture_minimap.texture_id);
-                                glTexSubImage2D(GL_TEXTURE_2D, 0, result.chunk->x * CHUNK_SIZE, result.chunk->y * CHUNK_SIZE,
-                                                                CHUNK_SIZE, CHUNK_SIZE, GL_RGBA, GL_UNSIGNED_BYTE, result.minimap_data);
-                                glBindTexture(GL_TEXTURE_2D, 0);
-                        }
+                        glBindTexture(GL_TEXTURE_2D, texture_minimap.texture_id);
+                        glTexSubImage2D(GL_TEXTURE_2D, 0, result.chunk->x * CHUNK_SIZE, result.chunk->y * CHUNK_SIZE,
+                                                        CHUNK_SIZE, CHUNK_SIZE, GL_RGBA, GL_UNSIGNED_BYTE, result.minimap_data);
+                        glBindTexture(GL_TEXTURE_2D, 0);
                 }
 
                 tesselator_free(&result.tesselator);

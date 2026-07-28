@@ -21,6 +21,8 @@
 
 #include "window.h"
 #include "weapon.h"
+#include "cameracontroller.h"
+#include "config.h"
 #include "camera.h"
 #include "particle.h"
 #include "map.h"
@@ -81,9 +83,9 @@ void weapon_update() {
 
 float weapon_recoil_anim(int gun) {
 	switch(gun) {
-		case WEAPON_RIFLE: return 0.3F;
-		case WEAPON_SMG: return 0.125F;
-		case WEAPON_SHOTGUN: return 0.75F;
+		case WEAPON_RIFLE: return 0.70F;
+		case WEAPON_SMG: return 0.35F;
+		case WEAPON_SHOTGUN: return 1.5F;
 		default: return 0.0F;
 	}
 }
