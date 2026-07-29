@@ -22,6 +22,7 @@
 #include <math.h>
 
 #include "common.h"
+#include "glx.h"
 #include "camera.h"
 #include "player.h"
 #include "matrix.h"

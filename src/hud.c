@@ -4829,7 +4829,7 @@ static void render_setting_row(mu_Context* ctx, struct config_setting* a, int wi
                         hud_textbox(ctx, a->value, a->max + 1, 0);
                         break;
                 case CONFIG_TYPE_INT:
-                        if((int)a->max == 1 && (int)a->min == 0) {
+                        if(a->max == 1 && a->min == 0) {
                                 mu_text(ctx, a->name);
                                 mu_checkbox(ctx, "", a->value);
                         } else if(a->defaults_length > 0) {
@@ -4845,7 +4845,7 @@ static void render_setting_row(mu_Context* ctx, struct config_setting* a, int wi
                         break;
                 case CONFIG_TYPE_FLOAT:
                         mu_text(ctx, a->name);
-                        if(a->max == INT_MAX) {
+                        if(a->max >= 1e9f) {
                                 mu_number(ctx, a->value, 0.1F);
                                 *(float*)a->value = max(a->min, *(float*)a->value);
                         } else {

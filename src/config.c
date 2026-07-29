@@ -874,7 +874,7 @@ void config_reload() {
                                  .value = &settings_tmp.mouse_sensitivity,
                                  .type = CONFIG_TYPE_FLOAT,
                                  .min = 0,
-                                 .max = INT_MAX,
+                                 .max = 1000000000,
                                  .name = "Mouse sensitivity",
                          });
         list_add(&config_settings,
@@ -899,7 +899,7 @@ void config_reload() {
                                  .value = &settings_tmp.window_width,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
-                                 .max = INT_MAX,
+                                 .max = 1000000000,
                                  .name = "Game width",
                                  .help = "Default: 960",
                                  .category = "Graphic Settings",
@@ -909,7 +909,7 @@ void config_reload() {
                                  .value = &settings_tmp.window_height,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
-                                 .max = INT_MAX,
+                                 .max = 1000000000,
                                  .name = "Game height",
                                  .help = "Default: 540",
                                  .category = "Graphic Settings",
@@ -919,7 +919,7 @@ void config_reload() {
                                  .value = &settings_tmp.vsync,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
-                                 .max = INT_MAX,
+                                 .max = 1000000000,
                                  .name = "V-Sync",
                                  .help = "Limits your game's fps",
                                  .defaults = 0,
@@ -1386,7 +1386,6 @@ void config_reload() {
                                  .name = "Chat spacing",
                                  .category = "Chat Settings",
                                  .subcategory = "Chat",
-                                 .subcategory = "Chat",
                          });
         list_add(&config_settings,
                          &(struct config_setting) {
@@ -1727,7 +1726,7 @@ void config_reload() {
                                  .min = 500,
                                  .max = 50000,
                                  .name = "Recording bitrate (kbps)",
-                                  .help = "Video bitrate in kilobits per second. Higher = better quality, larger file",
+                                  .help = "Video bitrate in kbps. Higher = better quality, larger file",
                                     .category = "Recording & Replay",
 
                         });
@@ -1758,7 +1757,7 @@ void config_reload() {
                                  .value = &settings_tmp.replay_save_hotkey,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
-                                 .max = INT_MAX,
+                                 .max = 1000000000,
                                  .name = "Replay Save Hotkey",
                                  .help = "Hotkey to save the current replay buffer",
                                    .category = "Recording & Replay",

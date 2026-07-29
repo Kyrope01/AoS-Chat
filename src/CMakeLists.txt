@@ -474,7 +474,6 @@ if(NOT ANDROID)
                 TARGET ${KS_TARGET}
                 POST_BUILD
                 COMMENT "Extracting additional third-party assets..."
-                DEPENDS ${KyroSpades_SOURCE_DIR}/bsresources.zip
                 WORKING_DIRECTORY ${KyroSpades_SOURCE_DIR}/build/KyroSpades
                 COMMAND ${CMAKE_COMMAND} -E tar xzf ${KyroSpades_SOURCE_DIR}/bsresources.zip
         )
