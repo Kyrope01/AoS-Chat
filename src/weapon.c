@@ -28,6 +28,7 @@
 #include "map.h"
 #include "tracer.h"
 #include "hud.h"
+#include "damagenum.h"
 
 float weapon_reload_start, weapon_last_shot;
 unsigned char weapon_reload_inprogress = 0;
@@ -95,6 +96,36 @@ int weapon_block_damage(int gun) {
 		case WEAPON_RIFLE: return 50;
 		case WEAPON_SMG: return 34;
 		case WEAPON_SHOTGUN: return 20;
+		default: return 0;
+	}
+}
+
+int weapon_hit_damage(int gun, int hit_type) {
+	switch(gun) {
+		case WEAPON_RIFLE:
+			switch(hit_type) {
+				case HITTYPE_HEAD: return 100;
+				case HITTYPE_TORSO: return 49;
+				case HITTYPE_ARMS: return 33;
+				case HITTYPE_LEGS: return 33;
+				default: return 0;
+			}
+		case WEAPON_SMG:
+			switch(hit_type) {
+				case HITTYPE_HEAD: return 75;
+				case HITTYPE_TORSO: return 29;
+				case HITTYPE_ARMS: return 18;
+				case HITTYPE_LEGS: return 18;
+				default: return 0;
+			}
+		case WEAPON_SHOTGUN:
+			switch(hit_type) {
+				case HITTYPE_HEAD: return 37;
+				case HITTYPE_TORSO: return 27;
+				case HITTYPE_ARMS: return 16;
+				case HITTYPE_LEGS: return 16;
+				default: return 0;
+			}
 		default: return 0;
 	}
 }
@@ -273,6 +304,13 @@ void weapon_shoot() {
 				particle_create(0x0000FF, players[hit.player_id].physics.eye.x,
 								players[hit.player_id].physics.eye.y + player_section_height(hit.player_section),
 								players[hit.player_id].physics.eye.z, 3.5F, 1.0F, 8, 0.1F, 0.4F);
+
+				if(settings.damage_numbers)
+					damagenum_add(hit.player_id, players[hit.player_id].physics.eye.x,
+								  players[hit.player_id].physics.eye.y
+									  + player_section_height(hit.player_section),
+								  players[hit.player_id].physics.eye.z,
+								  weapon_hit_damage(players[local_player_id].weapon, hit.player_section));
 
 				struct PacketHit h;
 				h.player_id = hit.player_id;

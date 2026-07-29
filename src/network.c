@@ -36,6 +36,7 @@
 #include "player.h"
 #include "network.h"
 #include "particle.h"
+#include "damagenum.h"
 #include "texture.h"
 #include "chunk.h"
 #include "skins.h"
@@ -1229,6 +1230,7 @@ void network_disconnect() {
                 network_logged_in = 0;
                 network_map_transfer_end = 0;
                 player_clear_corpses();
+                damagenum_clear();
                 /* Belt-and-braces: the live chat ring belongs to the just-closed
                    session. server_c also calls chat_clear on the next connect,
                    but clearing here too prevents any UI that runs in the

@@ -76,6 +76,8 @@ extern struct RENDER_OPTIONS {
         float spectator_acceleration;
         float spectator_fog_distance;
         int iron_sight;
+        int damage_numbers;
+        float damage_number_size;
         int disable_raw_input;
         int ui_spacing;
         int ui_padding;
@@ -163,8 +165,8 @@ enum {
 struct config_setting {
         void* value;
         int type;
-        int min;
-        int max;
+        float min;
+        float max;
         char name[32];
         char help[64];
         char category[32];

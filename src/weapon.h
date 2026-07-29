@@ -32,6 +32,7 @@ int weapon_can_reload(void);
 void weapon_reload_abort(void);
 void weapon_shoot(void);
 int weapon_block_damage(int gun);
+int weapon_hit_damage(int gun, int hit_type);
 float weapon_delay(int gun);
 int weapon_ammo(int gun);
 int weapon_ammo_reserved(int gun);

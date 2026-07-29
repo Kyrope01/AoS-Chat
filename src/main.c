@@ -43,6 +43,7 @@
 #include "map.h"
 #include "particle.h"
 #include "tracer.h"
+#include "damagenum.h"
 #include "camera.h"
 #include "cameracontroller.h"
 #include "grenade.h"
@@ -289,6 +290,7 @@ void drawScene() {
         matrix_upload();
         particle_render();
         tracer_render();
+        damagenum_render();
         grenade_render();
         map_damaged_voxels_render();
         matrix_upload();
@@ -1779,6 +1781,7 @@ void init() {
         sound_init();
         skins_init();
         tracer_init();
+        damagenum_init();
         hud_init();
         chunk_init();
         grenade_init();
@@ -2248,6 +2251,8 @@ int main(int argc, char** argv) {
         log_info("Game started!");
 
         settings.iron_sight = 1;
+        settings.damage_numbers = 1;
+        settings.damage_number_size = 0.5F;
         settings.replay_enabled = -1;
         config_reload();
 
@@ -2353,6 +2358,7 @@ int main(int argc, char** argv) {
                                 player_update(step, 0);
                         camera_update(step);
                         tracer_update(step);
+                        damagenum_update(step);
                         particle_update(step);
                         if(settings.rain) {
                                 particle_create_rain();
