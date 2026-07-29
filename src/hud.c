@@ -4763,7 +4763,7 @@ static int int_slider_defaults(mu_Context* ctx, struct config_setting* setting) 
         return res;
 }
 
-static int int_slider(mu_Context* ctx, int* value, int low, int high) {
+static int int_slider(mu_Context* ctx, int* value, float low, float high) {
         float tmp = *value;
         mu_push_id(ctx, &value, sizeof(value));
         int res = mu_slider_ex(ctx, &tmp, low, high, 0, "%.0f", MU_OPT_ALIGNCENTER);
@@ -4829,13 +4829,13 @@ static void render_setting_row(mu_Context* ctx, struct config_setting* a, int wi
                         hud_textbox(ctx, a->value, a->max + 1, 0);
                         break;
                 case CONFIG_TYPE_INT:
-                        if(a->max == 1 && a->min == 0) {
+                        if((int)a->max == 1 && (int)a->min == 0) {
                                 mu_text(ctx, a->name);
                                 mu_checkbox(ctx, "", a->value);
                         } else if(a->defaults_length > 0) {
                                 mu_text(ctx, a->name);
                                 int_slider_defaults(ctx, a);
-                        } else if(a->max == INT_MAX) {
+                        } else if(a->max >= 1e9f) {
                                 mu_text(ctx, a->name);
                                 int_number(ctx, a->value);
                         } else {

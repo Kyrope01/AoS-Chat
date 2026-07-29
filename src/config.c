@@ -311,6 +311,7 @@ void config_save() {
         config_setf("client", "chat_shadow", settings.chat_shadow);
         config_seti("client", "chat_flip_on_open", settings.chat_flip_on_open);
         config_seti("client", "show_player_arms", settings.player_arms);
+        config_seti("client", "camera_movement", settings.camera_movement);
         config_seti("client", "chat_spacing", settings.chat_spacing);
         config_sets("client", "chat_mention_words", settings.chat_mention_words);
         config_seti("client", "chat_mention_r", settings.chat_mention_r);
@@ -340,6 +341,8 @@ void config_save() {
         config_seti("client", "ads_zoom_animation", settings.ads_zoom_animation);
         config_seti("client", "auto_demo_recording", settings.auto_demo_recording);
         config_seti("client", "player_stats", settings.player_stats);
+        config_seti("client", "damage_numbers", settings.damage_numbers);
+        config_setf("client", "damage_number_size", settings.damage_number_size);
         config_seti("client", "player_technical_stats", settings.player_technical_stats);
         config_seti("client", "rain", settings.rain);
         config_seti("client", "snow", settings.snow);
@@ -439,6 +442,7 @@ static int config_read_key(void* user, const char* section, const char* name, co
                 IMPORT_SETTING(settings.chat_shadow, chat_shadow, fmax(0, fmin(1.f, atof(value))));
                 IMPORT_SETTING(settings.chat_flip_on_open, chat_flip_on_open, atoi(value));
                 IMPORT_SETTING(settings.player_arms, show_player_arms, atoi(value));
+IMPORT_SETTING(settings.camera_movement, camera_movement, atoi(value));
                 IMPORT_SETTING(settings.chat_spacing, chat_spacing, atoi(value));
                 IMPORT_SETTING_STR(settings.chat_mention_words, chat_mention_words);
                 IMPORT_SETTING(settings.chat_mention_r, chat_mention_r, max(0, min(255, atoi(value))));
@@ -493,6 +497,8 @@ static int config_read_key(void* user, const char* section, const char* name, co
                 IMPORT_SETTING(settings.ads_zoom_animation, ads_zoom_animation, atoi(value));
                 IMPORT_SETTING(settings.auto_demo_recording, auto_demo_recording, atoi(value));
                 IMPORT_SETTING(settings.player_stats, player_stats, atoi(value));
+                IMPORT_SETTING(settings.damage_numbers, damage_numbers, atoi(value));
+                IMPORT_SETTING(settings.damage_number_size, damage_number_size, fmaxf(0.1F, fminf(2.0F, atof(value))));
                 IMPORT_SETTING(settings.player_technical_stats, player_technical_stats, atoi(value));
                 IMPORT_SETTING(settings.rain, rain, atoi(value));
                 IMPORT_SETTING(settings.snow, snow, atoi(value));
@@ -1319,6 +1325,26 @@ void config_reload() {
                                  .help = "Makes in-game team colors in the HUD brighter",
                                  .category = "Graphic Settings",
                                  .subcategory = "Color",
+                         });
+        list_add(&config_settings,
+                         &(struct config_setting) {
+                                 .value = &settings_tmp.damage_numbers,
+                                 .type = CONFIG_TYPE_INT,
+                                 .min = 0,
+                                 .max = 1,
+                                 .name = "Damage Numbers",
+                                 .help = "Show floating damage numbers when you hit a player",
+                                 .subcategory = "Damage Numbers",
+                         });
+        list_add(&config_settings,
+                         &(struct config_setting) {
+                                 .value = &settings_tmp.damage_number_size,
+                                 .type = CONFIG_TYPE_FLOAT,
+                                 .min = 0.1F,
+                                 .max = 2.0F,
+                                 .name = "Damage Number Size",
+                                 .help = "Scale of damage numbers (0.1x to 2x)",
+                                 .subcategory = "Damage Numbers",
                          });
         list_add(&config_settings,
                          &(struct config_setting) {

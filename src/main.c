@@ -43,6 +43,7 @@
 #include "map.h"
 #include "particle.h"
 #include "tracer.h"
+#include "damagenum.h"
 #include "camera.h"
 #include "cameracontroller.h"
 #include "grenade.h"
@@ -289,6 +290,7 @@ void drawScene() {
         matrix_upload();
         particle_render();
         tracer_render();
+        damagenum_render();
         grenade_render();
         map_damaged_voxels_render();
         matrix_upload();
@@ -1286,7 +1288,8 @@ void display() {
                                 if(players[local_player_id].input.buttons.rmb)
                                         players[local_player_id].input.buttons.rmb_start = window_time() + 0.5F;
                                 players[local_player_id].input.buttons.rmb = 0;
-                        } else {
+                        }
+                        if(1) {
                                 if(hud_active->render_localplayer) {
                                         float tmp2 = players[local_player_id].physics.eye.y;
                                         players[local_player_id].physics.eye.y = last_cy;
@@ -1778,6 +1781,7 @@ void init() {
         sound_init();
         skins_init();
         tracer_init();
+        damagenum_init();
         hud_init();
         chunk_init();
         grenade_init();
@@ -2139,7 +2143,8 @@ int main(int argc, char** argv) {
         settings.spectator_fog_distance = 128.0F;
         settings.window_width = 800;
         settings.window_height = 600;
-        settings.player_arms = 0;
+        settings.player_arms = 1;
+        settings.camera_movement = 0;
         settings.fullscreen = 0;
         settings.greedy_meshing = 0;
         /* The look formula is `setting / 5.0F * MOUSE_SENSITIVITY`, so the
@@ -2246,6 +2251,8 @@ int main(int argc, char** argv) {
         log_info("Game started!");
 
         settings.iron_sight = 1;
+        settings.damage_numbers = 1;
+        settings.damage_number_size = 0.5F;
         settings.replay_enabled = -1;
         config_reload();
 
@@ -2351,6 +2358,7 @@ int main(int argc, char** argv) {
                                 player_update(step, 0);
                         camera_update(step);
                         tracer_update(step);
+                        damagenum_update(step);
                         particle_update(step);
                         if(settings.rain) {
                                 particle_create_rain();

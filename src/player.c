@@ -37,6 +37,11 @@
 #include "window.h"
 #include "particle.h"
 #include "hud.h"
+#include <math.h>
+#include "cameracontroller.h"
+static float os_sprint_state=0, os_sprint_smooth=0, os_raise_state=1, os_last_time=0, os_aim_state=0, os_aim_smooth=0;
+static float os_lerp_smooth(float cur,float tgt,float dt,float p){float f=1.0f-powf(p,dt);return cur+(tgt-cur)*f;}
+
 
 struct GameState gamestate;
 
@@ -1027,17 +1032,64 @@ void player_render(struct Player* p, int id) {
 	if(render_fpv)
 		matrix_translate(matrix_model, 0.0F, -2 * 0.1F, -2 * 0.1F);
 
-	if(render_fpv && p->alive) {
-		float speed = sqrt(pow(p->physics.velocity.x, 2) + pow(p->physics.velocity.z, 2)) / 0.25F;
+	if(render_fpv) {
+		float curTime = game_time();
+		float dt = curTime - os_last_time;
+		if(os_last_time == 0.0f) dt = 0.016f;
+		if(dt < 0) dt = 0.016f;
+		if(dt > 0.05f) dt = 0.05f;
+		os_last_time = curTime;
+		float sprintTarget = (p->input.keys.sprint && !p->input.keys.crouch && p->alive) ? 1.0f : 0.0f;
+		float mv = sqrtf(p->physics.velocity.x*p->physics.velocity.x + p->physics.velocity.z*p->physics.velocity.z);
+		if(mv < 0.02f) sprintTarget = 0;
+		os_sprint_state = sprintTarget;
+		float ss = os_sprint_state * os_sprint_state;
+		if(ss > os_sprint_smooth) os_sprint_smooth = os_lerp_smooth(os_sprint_smooth, ss, dt, 0.00005f);
+		else os_sprint_smooth = os_lerp_smooth(os_sprint_smooth, ss, dt, 0.0008f);
+		float raiseTarget = 1.0f;
+		if(curTime - p->item_showup < 0.15f) { raiseTarget = (curTime - p->item_showup) / 0.15f; if(raiseTarget < 0) raiseTarget = 0; if(raiseTarget > 1) raiseTarget = 1; }
+		os_raise_state = os_lerp_smooth(os_raise_state, raiseTarget, dt, 0.0005f);
+		float aimTarget = (p->held_item == TOOL_GUN && p->input.buttons.rmb && !p->input.keys.sprint) ? 1.0f : 0.0f;
+		os_aim_state = aimTarget;
+		os_aim_smooth = os_lerp_smooth(os_aim_smooth, os_aim_state, dt, 0.0008f);
+		float speed = sqrtf(powf(p->physics.velocity.x, 2) + powf(p->physics.velocity.z, 2)) / 0.25f;
+		if(speed > 2.5f) speed = 2.5f;
 		float* f = player_tool_translate_func(p);
-		matrix_translate(matrix_model, f[0], f[1], 0.1F * player_swing_func(time / 1000.0F) * speed + f[2]);
+		float swayX=0, swayY=0;
+		if(p == &players[local_player_id]) { static float last_rx=0, last_ry=0; float dX = camera_rot_x - last_rx; float dY = camera_rot_y - last_ry; if(dX > 3.14f) dX-=6.283f; if(dX < -3.14f) dX+=6.283f; swayX = dX * 0.30f; swayY = dY * 0.22f; last_rx = camera_rot_x; last_ry = camera_rot_y; if(swayX>0.03f) swayX=0.03f; if(swayX<-0.03f) swayX=-0.03f; if(swayY>0.03f) swayY=0.03f; if(swayY<-0.03f) swayY=-0.03f; }
+		float s = os_sprint_smooth;
+		if(p->held_item == TOOL_GUN) { matrix_rotate(matrix_model, s * -3.5f, 0.0f, 1.0f, 0.0f); matrix_rotate(matrix_model, s * 10.0f, 1.0f, 0.0f, 0.0f); matrix_rotate(matrix_model, s * -15.0f, 0.0f, 0.0f, 1.0f); matrix_translate(matrix_model, s * 0.08f, s * -0.028f, s * 0.06f); matrix_translate(matrix_model, sinf(curTime*14.0f)*0.007f*s, fabsf(sinf(curTime*14.0f))*-0.006f*s, 0); }
+		else if(p->held_item == TOOL_SPADE) { matrix_rotate(matrix_model, s * 32.0f, 0.0f, 1.0f, 0.0f); matrix_translate(matrix_model, s * 0.10f, s * -0.14f, s * -0.03f); }
+		else if(p->held_item == TOOL_BLOCK) { matrix_rotate(matrix_model, s * -9.0f, 0.0f, 0.0f, 1.0f); matrix_translate(matrix_model, s * 0.05f, s * -0.12f, s * -0.02f); }
+		else { matrix_rotate(matrix_model, s * -9.0f, 0.0f, 0.0f, 1.0f); matrix_translate(matrix_model, s * 0.05f, s * -0.08f, s * -0.02f); }
+		float putdown = 1.0f - os_raise_state;
+		if(putdown > 0.001f) { matrix_rotate(matrix_model, putdown * -35.0f, 0.0f, 0.0f, 1.0f); matrix_translate(matrix_model, putdown * 0.05f, putdown * -0.12f, putdown * 0.04f); }
+		if(os_aim_smooth > 0.001f && p->held_item == TOOL_GUN) { float ads = os_aim_smooth; matrix_translate(matrix_model, -0.045f*ads, 0.013f*ads, 0.045f*ads); }
+		if(p->held_item == TOOL_GUN) {
+			float timeSinceShot = curTime - p->weapon_last_shot;
+			if(timeSinceShot >= 0 && timeSinceShot < 0.40f) {
+				float delay = weapon_delay(p->weapon);
+				float t = 1.0f - timeSinceShot / delay;
+				if(t < 0) t = 0; if(t > 1) t = 1;
+				float kick = t * t * (3.0f - 2.0f * t);
+				float pitch=0, yaw=0, roll=0, back=0, up=0;
+				float rnd = ((float)rand()/RAND_MAX - 0.5f);
+				float rnd2 = ((float)rand()/RAND_MAX - 0.5f);
+				if(p->weapon == WEAPON_RIFLE) { pitch = 12.0f; yaw = rnd*4.0f; roll = rnd2*3.0f; back = 0.22f; up = 0.10f; }
+				else if(p->weapon == WEAPON_SMG) { pitch = 6.0f; yaw = rnd*5.0f; roll = rnd2*2.5f; back = 0.10f; up = 0.05f; }
+				else { pitch = 18.0f; yaw = rnd*6.0f; roll = rnd2*5.0f; back = 0.32f; up = 0.16f; }
+				matrix_rotate(matrix_model, pitch*kick, 1.0f, 0.0f, 0.0f);
+				matrix_rotate(matrix_model, yaw*kick, 0.0f, 1.0f, 0.0f);
+				matrix_rotate(matrix_model, roll*kick, 0.0f, 0.0f, 1.0f);
+				matrix_translate(matrix_model, yaw*kick*0.004f, -up*kick, -back*kick);
+				float bounce = sinf(kick*3.14f*2.5f) * 0.35f * (1.0f-kick);
+				matrix_translate(matrix_model, 0, bounce*0.015f, bounce*0.025f);
+			}
+		}
+		matrix_translate(matrix_model, f[0] + swayX, f[1] + swayY, 0.1F * player_swing_func(time / 1000.0F) * speed + f[2]);
+	} else {
+		if(render_fpv && p->alive) { float speed = sqrtf(powf(p->physics.velocity.x, 2) + powf(p->physics.velocity.z, 2)) / 0.25f; float* f = player_tool_translate_func(p); matrix_translate(matrix_model, f[0], f[1], 0.1F * player_swing_func(time / 1000.0F) * speed + f[2]); }
 	}
-
-	if(p->input.keys.sprint && !p->input.keys.crouch)
-		matrix_rotate(matrix_model, 45.0F, 1.0F, 0.0F, 0.0F);
-
-	if(render_fpv && game_time() - p->item_showup < 0.5F)
-		matrix_rotate(matrix_model, 45.0F - (game_time() - p->item_showup) * 90.0F, 1.0F, 0.0F, 0.0F);
 
 	if(!(p->held_item == TOOL_SPADE && render_fpv && camera_mode == CAMERAMODE_FPS)) {
 		float* angles = player_tool_func(p);
@@ -1059,11 +1111,13 @@ void player_render(struct Player* p, int id) {
 	}
 
 	matrix_translate(matrix_model, -3.5F * 0.1F + 0.01F, 0.0F, 10 * 0.1F);
-	if(p->held_item == TOOL_SPADE && render_fpv && game_time() - p->item_showup >= 0.5F) {
+	if(p->held_item == TOOL_SPADE && render_fpv && game_time() - p->item_showup >= 0.25F) {
 		float* angles = player_tool_func(p);
+		float swingPower = sqrtf(angles[0]*angles[0] + angles[1]*angles[1]) / 30.0f;
+		if(swingPower > 0.05f) { matrix_translate(matrix_model, sinf(swingPower*3.14f)*0.04f, 0, swingPower*0.03f); matrix_rotate(matrix_model, swingPower*15.0f, 0.0f, 1.0f, 0.0f); }
 		matrix_translate(matrix_model, 0.0F, (model_spade.zpiv - model_spade.zsiz) * 0.05F, 0.0F);
-		matrix_rotate(matrix_model, angles[0], 1.0F, 0.0F, 0.0F);
-		matrix_rotate(matrix_model, angles[1], 0.0F, 1.0F, 0.0F);
+		matrix_rotate(matrix_model, angles[0]*1.5f, 1.0F, 0.0F, 0.0F);
+		matrix_rotate(matrix_model, angles[1]*1.5f, 0.0F, 1.0F, 0.0F);
 		matrix_translate(matrix_model, 0.0F, -(model_spade.zpiv - model_spade.zsiz) * 0.05F, 0.0F);
 	}
 

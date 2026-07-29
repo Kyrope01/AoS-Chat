@@ -36,6 +36,8 @@ float cameracontroller_bodyview_zoom = 0.0F;
 // Smooth crouch interpolation for local player
 static float crouch_offset = 0.0F;
 static float target_crouch_offset = 0.0F;
+void cameracontroller_add_shake(float intensity) { }
+
 
 float cameracontroller_death_velocity_x, cameracontroller_death_velocity_y, cameracontroller_death_velocity_z;
 
