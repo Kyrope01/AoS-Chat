@@ -28,6 +28,7 @@
 #include "matrix.h"
 #include "font.h"
 #include "window.h"
+#include "glx.h"
 #include "damagenumbers.h"
 
 /* Floating damage numbers, adapted from ZeroSpades' cg_damageIndicators.
