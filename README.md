@@ -1,4 +1,4 @@
-# KyroSpades (Enhanced ButterSpades)
+90# KyroSpades (Enhanced ButterSpades)
 ### This project is a modified fork of [ButterSpades](https://github.com/utf-4096/butterspades), introducing several quality-of-life improvements and visual enhancements. Link: https://github.com/Kyrope01/KyroSpades
 ### Compiled [releases](https://github.com/Kyrope01/KyroSpades/releases/tag/release) available for: Android, Windows, MacOS, Linux.
 ### KyroSpades Discord server: https://discord.gg/FM7vSxtug4
@@ -37,6 +37,8 @@
 | **Textured Blocks Added** | Blocks can now have textures when textured blocks are enabled. |
 | **Water shader+waves added** | Water blocks are reflecting blocks while fitting to a voxel game. |
 | **Graphical Effects Added** | Filmic tonemapping, chromatic aberration, volumetric lighting & lens flare. |
+| **Blood Stains** | Blood stains option added. |
+| **Damage Numbers** | Damage done to enemy on hit shown as floating numbers when this option is enabled. |
 
 
 ## Quick Setup: Dynamic Wallpapers
