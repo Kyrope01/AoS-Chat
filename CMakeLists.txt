@@ -43,11 +43,26 @@ if(IOS)
         message(STATUS "iOS detected: SDL + GLES + touch")
 endif()
 
-message(STATUS "Compiler is ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "Compiler is ${CMAKE_C_COMPILER_ID}")
 message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        if(CMAKE_BUILD_TYPE STREQUAL "Release")
+# NOTE: this project only calls project(KyroSpades C) -- there is no C++
+# language enabled at this point (src/CMakeLists.txt may conditionally
+# enable_language(CXX) later, for openal-soft, but that happens AFTER this
+# file already ran). Checking CMAKE_CXX_COMPILER_ID here was always empty,
+# so this whole optimization block silently never executed and the entire
+# engine was built with CMake's bare default flags instead of -Ofast. Use
+# CMAKE_C_COMPILER_ID, which is always populated for a C project.
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+        if(IOS OR ANDROID)
+                # -march=native makes no sense (and can outright fail to compile)
+                # when cross-compiling for a different CPU than the host
+                # machine -- only apply it for same-machine desktop builds.
+                add_compile_options(-Ofast)
+                if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+                        add_compile_options(-g)
+                endif()
+        elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
                 add_compile_options(-Ofast)
         else()
                 add_compile_options(-Ofast -g -march=native)
@@ -70,3 +85,5 @@ if(DEFINED ENV{CI_PROJECT_DIR})
 endif()
 
 add_subdirectory(src)
+
+
