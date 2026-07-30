@@ -36,13 +36,14 @@
 #include "player.h"
 #include "network.h"
 #include "particle.h"
-#include "damagenum.h"
 #include "texture.h"
 #include "chunk.h"
 #include "skins.h"
 #include "config.h"
 #include "demo.h"
 #include "window.h"
+#include "bloodmarks.h"
+#include "damagenumbers.h"
 
 void (*packets[256])(void* data, int len) = {NULL};
 
@@ -587,6 +588,8 @@ void read_PacketPlayerLeft(void* data, int len) {
 void read_PacketMapStart(void* data, int len) {
         if(demo_is_seeking()) return;
         player_clear_corpses();
+        bloodmarks_clear();
+        damagenumbers_clear();
         // ffs someone fix the wrong map size of 1.5mb
         if(compressed_chunk_data) {
                 free(compressed_chunk_data);
@@ -855,6 +858,7 @@ void read_PacketGrenade(void* data, int len) {
 
         grenade_add(&(struct Grenade) {
                 .team = players[p->player_id].team,
+                .owner_id = p->player_id,
                 .fuse_length = p->fuse_length,
                 .pos.x = p->x,
                 .pos.y = 63.0F - p->z,
@@ -1230,7 +1234,8 @@ void network_disconnect() {
                 network_logged_in = 0;
                 network_map_transfer_end = 0;
                 player_clear_corpses();
-                damagenum_clear();
+                bloodmarks_clear();
+                damagenumbers_clear();
                 /* Belt-and-braces: the live chat ring belongs to the just-closed
                    session. server_c also calls chat_clear on the next connect,
                    but clearing here too prevents any UI that runs in the
@@ -1402,6 +1407,8 @@ int network_update() {
                                         network_logged_in = 0;
                                         network_map_transfer_end = 0;
                                         player_clear_corpses();
+                                        bloodmarks_clear();
+                                        damagenumbers_clear();
                                         return 0;
                         }
                 }
@@ -1512,3 +1519,5 @@ void network_init() {
         packets[PACKET_EXTINFO_ID] = read_PacketExtInfo;
         packets[PACKET_EXT_BASE + EXT_PLAYER_PROPERTIES] = read_PacketPlayerProperties;
 }
+
+

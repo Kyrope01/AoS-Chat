@@ -80,3 +80,5 @@ void tesselator_addf_cube_face_uv(struct tesselator* t, enum tesselator_cube_fac
                                                                   float sz, float u, float v, float us, float vs);
 
 #endif
+
+

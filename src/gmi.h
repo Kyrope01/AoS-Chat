@@ -14,3 +14,4 @@ extern unsigned int gmi_tdm_kills[2];
 void gmi_mode_detect_message(char* message);
 
 #endif
+

@@ -31,3 +31,5 @@ void mouse_scroll(struct window_instance* window, double xoffset, double yoffset
 void on_error(int i, const char* s);
 
 #endif
+
+

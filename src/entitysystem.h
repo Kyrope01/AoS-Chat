@@ -39,3 +39,5 @@ void entitysys_add(struct entity_system* es, void* object);
 void entitysys_iterate(struct entity_system* es, void* user, bool (*callback)(void* object, void* user));
 
 #endif
+
+

@@ -152,3 +152,5 @@ void tracer_update(float dt) {
 void tracer_init() {
 	entitysys_create(&tracers, sizeof(struct Tracer), PLAYERS_MAX);
 }
+
+

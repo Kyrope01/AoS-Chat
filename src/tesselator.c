@@ -492,3 +492,5 @@ void tesselator_addf_cube_face_uv(struct tesselator* t, enum tesselator_cube_fac
                         break;
         }
 }
+
+

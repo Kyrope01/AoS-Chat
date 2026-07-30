@@ -55,3 +55,5 @@ int  chatlog_search_active(void);
 void chatlog_search_text_input(const char* utf8);
 
 #endif
+
+

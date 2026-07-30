@@ -28,7 +28,8 @@
 #include "map.h"
 #include "tracer.h"
 #include "hud.h"
-#include "damagenum.h"
+#include "bloodmarks.h"
+#include "damagenumbers.h"
 
 float weapon_reload_start, weapon_last_shot;
 unsigned char weapon_reload_inprogress = 0;
@@ -100,31 +101,32 @@ int weapon_block_damage(int gun) {
 	}
 }
 
-int weapon_hit_damage(int gun, int hit_type) {
+/* Client-side estimate of per-hit body damage, used only to draw the cosmetic
+   floating "damage numbers" HUD element. The server remains authoritative for
+   actual HP -- this table (classic AoS 0.75 values) exists purely so the
+   number shown to the shooter is in the right ballpark. */
+int weapon_get_damage(int gun, int hit_type) {
 	switch(gun) {
 		case WEAPON_RIFLE:
 			switch(hit_type) {
 				case HITTYPE_HEAD: return 100;
-				case HITTYPE_TORSO: return 49;
 				case HITTYPE_ARMS: return 33;
 				case HITTYPE_LEGS: return 33;
-				default: return 0;
+				default: return 49; /* torso */
 			}
 		case WEAPON_SMG:
 			switch(hit_type) {
 				case HITTYPE_HEAD: return 75;
-				case HITTYPE_TORSO: return 29;
 				case HITTYPE_ARMS: return 18;
 				case HITTYPE_LEGS: return 18;
-				default: return 0;
+				default: return 29; /* torso */
 			}
 		case WEAPON_SHOTGUN:
 			switch(hit_type) {
 				case HITTYPE_HEAD: return 37;
-				case HITTYPE_TORSO: return 27;
 				case HITTYPE_ARMS: return 16;
 				case HITTYPE_LEGS: return 16;
-				default: return 0;
+				default: return 27; /* torso */
 			}
 		default: return 0;
 	}
@@ -301,16 +303,20 @@ void weapon_shoot() {
 				} else {
 					sound_create(SOUND_LOCAL, &sound_hitbody, 0.0F, 0.0F, 0.0F);
 				}
-				particle_create(0x0000FF, players[hit.player_id].physics.eye.x,
-								players[hit.player_id].physics.eye.y + player_section_height(hit.player_section),
-								players[hit.player_id].physics.eye.z, 3.5F, 1.0F, 8, 0.1F, 0.4F);
+				float hit_x = players[hit.player_id].physics.eye.x;
+				float hit_y = players[hit.player_id].physics.eye.y + player_section_height(hit.player_section);
+				float hit_z = players[hit.player_id].physics.eye.z;
+				particle_create(0x0000FF, hit_x, hit_y, hit_z, 3.5F, 1.0F, 8, 0.1F, 0.4F);
 
-				if(settings.damage_numbers)
-					damagenum_add(hit.player_id, players[hit.player_id].physics.eye.x,
-								  players[hit.player_id].physics.eye.y
-									  + player_section_height(hit.player_section),
-								  players[hit.player_id].physics.eye.z,
-								  weapon_hit_damage(players[local_player_id].weapon, hit.player_section));
+				/* Blood decal: spatter along the bullet's flight direction so
+				   it lands on whatever surface is behind the victim. */
+				bloodmarks_spatter(hit_x, hit_y, hit_z, o[0] * 12.0F, o[1] * 12.0F, o[2] * 12.0F, true);
+
+				/* Floating damage number: client-side estimate only, purely
+				   cosmetic feedback for the shooter. The server remains
+				   authoritative for actual HP. */
+				int dmg = weapon_get_damage(players[local_player_id].weapon, hit.player_section);
+				damagenumbers_add(hit.player_id, dmg, hit_x, hit_y, hit_z);
 
 				struct PacketHit h;
 				h.player_id = hit.player_id;
@@ -383,3 +389,5 @@ void weapon_shoot() {
 				 players[local_player_id].pos.y, players[local_player_id].pos.z);
 	particle_create_casing(&players[local_player_id]);
 }
+
+

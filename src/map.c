@@ -812,3 +812,5 @@ float map_sun_shadow(int x, int y, int z, int steps) {
 
         return 1.0F;
 }
+
+

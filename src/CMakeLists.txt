@@ -199,7 +199,6 @@ list(APPEND CLIENT_SOURCES sound.c)
 list(APPEND CLIENT_SOURCES stb_truetype.c)
 list(APPEND CLIENT_SOURCES texture.c)
 list(APPEND CLIENT_SOURCES tracer.c)
-list(APPEND CLIENT_SOURCES damagenum.c)
 list(APPEND CLIENT_SOURCES weapon.c)
 list(APPEND CLIENT_SOURCES window.c)
 list(APPEND CLIENT_SOURCES utils.c)
@@ -215,6 +214,8 @@ list(APPEND CLIENT_SOURCES microui.c)
 list(APPEND CLIENT_SOURCES channel.c)
 list(APPEND CLIENT_SOURCES entitysystem.c)
 list(APPEND CLIENT_SOURCES demo.c)
+list(APPEND CLIENT_SOURCES bloodmarks.c)
+list(APPEND CLIENT_SOURCES damagenumbers.c)
 # icon.rc is a Windows resource file — skip it on non-Windows platforms
 if(WIN32)
         list(APPEND CLIENT_SOURCES ${KyroSpades_SOURCE_DIR}/resources/icon.rc)
@@ -474,6 +475,7 @@ if(NOT ANDROID)
                 TARGET ${KS_TARGET}
                 POST_BUILD
                 COMMENT "Extracting additional third-party assets..."
+                DEPENDS ${KyroSpades_SOURCE_DIR}/bsresources.zip
                 WORKING_DIRECTORY ${KyroSpades_SOURCE_DIR}/build/KyroSpades
                 COMMAND ${CMAKE_COMMAND} -E tar xzf ${KyroSpades_SOURCE_DIR}/bsresources.zip
         )
@@ -542,3 +544,5 @@ if(NOT ANDROID)
 
         INCLUDE(CPack)
 endif()
+
+

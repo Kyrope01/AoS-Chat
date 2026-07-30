@@ -2264,3 +2264,5 @@ struct hud hud_chatlog = {
 	0,
 	NULL,
 };
+
+

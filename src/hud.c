@@ -57,6 +57,7 @@
 #include "particle.h"
 #include "model.h"
 #include "skins.h"
+#include "damagenumbers.h"
 
 struct hud* hud_active;
 struct window_instance* hud_window;
@@ -1292,6 +1293,10 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
         } else {
                 if(window_key_down(WINDOW_KEY_HIDEHUD))
                         return;
+
+                /* Floating damage numbers: drawn early in the 2D pass so chat/
+                   scoreboard/other HUD elements still layer on top of them. */
+                damagenumbers_render();
 
                 if(screen_current == SCREEN_TEAM_SELECT) {
                         glColor3f(1.0F, 1.0F, 1.0F);
@@ -4763,7 +4768,7 @@ static int int_slider_defaults(mu_Context* ctx, struct config_setting* setting) 
         return res;
 }
 
-static int int_slider(mu_Context* ctx, int* value, float low, float high) {
+static int int_slider(mu_Context* ctx, int* value, int low, int high) {
         float tmp = *value;
         mu_push_id(ctx, &value, sizeof(value));
         int res = mu_slider_ex(ctx, &tmp, low, high, 0, "%.0f", MU_OPT_ALIGNCENTER);
@@ -4835,7 +4840,7 @@ static void render_setting_row(mu_Context* ctx, struct config_setting* a, int wi
                         } else if(a->defaults_length > 0) {
                                 mu_text(ctx, a->name);
                                 int_slider_defaults(ctx, a);
-                        } else if(a->max >= 1e9f) {
+                        } else if(a->max == INT_MAX) {
                                 mu_text(ctx, a->name);
                                 int_number(ctx, a->value);
                         } else {
@@ -4845,7 +4850,7 @@ static void render_setting_row(mu_Context* ctx, struct config_setting* a, int wi
                         break;
                 case CONFIG_TYPE_FLOAT:
                         mu_text(ctx, a->name);
-                        if(a->max >= 1e9f) {
+                        if(a->max == INT_MAX) {
                                 mu_number(ctx, a->value, 0.1F);
                                 *(float*)a->value = max(a->min, *(float*)a->value);
                         } else {
@@ -5873,3 +5878,5 @@ void hud_common_render_for_chatlog(mu_Context* ctx) {
 void hud_common_sidebar_for_chatlog(mu_Context* ctx, float scalex, float scaley) {
         hud_common_sidebar(ctx, scalex, scaley);
 }
+
+

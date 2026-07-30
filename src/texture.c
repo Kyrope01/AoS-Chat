@@ -612,3 +612,5 @@ void texture_init() {
 
         texture_create_buffer(&texture_dummy, 1, 1, (unsigned char[]) {0, 0, 0, 0}, 1);
 }
+
+

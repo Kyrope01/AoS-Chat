@@ -790,3 +790,4 @@ void kv6_render(struct kv6_t* kv6, unsigned char team) {
 #endif
 	}
 }
+

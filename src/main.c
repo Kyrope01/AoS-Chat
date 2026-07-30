@@ -43,7 +43,6 @@
 #include "map.h"
 #include "particle.h"
 #include "tracer.h"
-#include "damagenum.h"
 #include "camera.h"
 #include "cameracontroller.h"
 #include "grenade.h"
@@ -59,6 +58,8 @@
 #include "skins.h"
 #include "chatlog.h"
 #include "recorder.h"
+#include "bloodmarks.h"
+#include "damagenumbers.h"
 #include "main.h"
 
 int fps = 0;
@@ -290,9 +291,9 @@ void drawScene() {
         matrix_upload();
         particle_render();
         tracer_render();
-        damagenum_render();
         grenade_render();
         map_damaged_voxels_render();
+        bloodmarks_render();
         matrix_upload();
 
         if(gamestate.gamemode_type == GAMEMODE_CTF) {
@@ -1057,6 +1058,12 @@ void display() {
 
                 camera_ExtractFrustum();
 
+                /* Snapshot the camera matrices now, while they still describe
+                   the real 3D scene -- everything from here on (view-model
+                   rendering, HUD ortho projection, etc.) will overwrite
+                   matrix_view/matrix_projection for its own purposes. */
+                damagenumbers_capture_camera();
+
                 if(!network_map_transfer) {
                         /* Sky gradient: drawn as a background BEFORE the 3D scene so
                            terrain correctly draws on top of it. The gradient makes the
@@ -1781,10 +1788,11 @@ void init() {
         sound_init();
         skins_init();
         tracer_init();
-        damagenum_init();
         hud_init();
         chunk_init();
         grenade_init();
+        bloodmarks_init();
+        damagenumbers_init();
 
         weapon_set(false);
 
@@ -2251,8 +2259,6 @@ int main(int argc, char** argv) {
         log_info("Game started!");
 
         settings.iron_sight = 1;
-        settings.damage_numbers = 1;
-        settings.damage_number_size = 0.5F;
         settings.replay_enabled = -1;
         config_reload();
 
@@ -2358,8 +2364,9 @@ int main(int argc, char** argv) {
                                 player_update(step, 0);
                         camera_update(step);
                         tracer_update(step);
-                        damagenum_update(step);
                         particle_update(step);
+                        bloodmarks_update(step);
+                        damagenumbers_update(step);
                         if(settings.rain) {
                                 particle_create_rain();
                         }
@@ -2484,3 +2491,5 @@ int main(int argc, char** argv) {
 
         }
 }
+
+

@@ -340,9 +340,9 @@ void config_save() {
         config_seti("client", "show_live_player_count", settings.show_live_player_count);
         config_seti("client", "ads_zoom_animation", settings.ads_zoom_animation);
         config_seti("client", "auto_demo_recording", settings.auto_demo_recording);
-        config_seti("client", "player_stats", settings.player_stats);
+        config_seti("client", "blood_marks", settings.blood_marks);
         config_seti("client", "damage_numbers", settings.damage_numbers);
-        config_setf("client", "damage_number_size", settings.damage_number_size);
+        config_seti("client", "player_stats", settings.player_stats);
         config_seti("client", "player_technical_stats", settings.player_technical_stats);
         config_seti("client", "rain", settings.rain);
         config_seti("client", "snow", settings.snow);
@@ -496,9 +496,9 @@ IMPORT_SETTING(settings.camera_movement, camera_movement, atoi(value));
                 IMPORT_SETTING(settings.show_live_player_count, show_live_player_count, atoi(value));
                 IMPORT_SETTING(settings.ads_zoom_animation, ads_zoom_animation, atoi(value));
                 IMPORT_SETTING(settings.auto_demo_recording, auto_demo_recording, atoi(value));
-                IMPORT_SETTING(settings.player_stats, player_stats, atoi(value));
+                IMPORT_SETTING(settings.blood_marks, blood_marks, atoi(value));
                 IMPORT_SETTING(settings.damage_numbers, damage_numbers, atoi(value));
-                IMPORT_SETTING(settings.damage_number_size, damage_number_size, fmaxf(0.1F, fminf(2.0F, atof(value))));
+                IMPORT_SETTING(settings.player_stats, player_stats, atoi(value));
                 IMPORT_SETTING(settings.player_technical_stats, player_technical_stats, atoi(value));
                 IMPORT_SETTING(settings.rain, rain, atoi(value));
                 IMPORT_SETTING(settings.snow, snow, atoi(value));
@@ -874,7 +874,7 @@ void config_reload() {
                                  .value = &settings_tmp.mouse_sensitivity,
                                  .type = CONFIG_TYPE_FLOAT,
                                  .min = 0,
-                                 .max = 1000000000,
+                                 .max = INT_MAX,
                                  .name = "Mouse sensitivity",
                          });
         list_add(&config_settings,
@@ -899,7 +899,7 @@ void config_reload() {
                                  .value = &settings_tmp.window_width,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
-                                 .max = 1000000000,
+                                 .max = INT_MAX,
                                  .name = "Game width",
                                  .help = "Default: 960",
                                  .category = "Graphic Settings",
@@ -909,7 +909,7 @@ void config_reload() {
                                  .value = &settings_tmp.window_height,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
-                                 .max = 1000000000,
+                                 .max = INT_MAX,
                                  .name = "Game height",
                                  .help = "Default: 540",
                                  .category = "Graphic Settings",
@@ -919,7 +919,7 @@ void config_reload() {
                                  .value = &settings_tmp.vsync,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
-                                 .max = 1000000000,
+                                 .max = INT_MAX,
                                  .name = "V-Sync",
                                  .help = "Limits your game's fps",
                                  .defaults = 0,
@@ -1328,26 +1328,6 @@ void config_reload() {
                          });
         list_add(&config_settings,
                          &(struct config_setting) {
-                                 .value = &settings_tmp.damage_numbers,
-                                 .type = CONFIG_TYPE_INT,
-                                 .min = 0,
-                                 .max = 1,
-                                 .name = "Damage Numbers",
-                                 .help = "Show floating damage numbers when you hit a player",
-                                 .subcategory = "Damage Numbers",
-                         });
-        list_add(&config_settings,
-                         &(struct config_setting) {
-                                 .value = &settings_tmp.damage_number_size,
-                                 .type = CONFIG_TYPE_FLOAT,
-                                 .min = 0.1F,
-                                 .max = 2.0F,
-                                 .name = "Damage Number Size",
-                                 .help = "Scale of damage numbers (0.1x to 2x)",
-                                 .subcategory = "Damage Numbers",
-                         });
-        list_add(&config_settings,
-                         &(struct config_setting) {
                                  .value = &settings_tmp.show_names_in_spec,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
@@ -1385,6 +1365,7 @@ void config_reload() {
                                  .help = "Spacing between messages in chat",
                                  .name = "Chat spacing",
                                  .category = "Chat Settings",
+                                 .subcategory = "Chat",
                                  .subcategory = "Chat",
                          });
         list_add(&config_settings,
@@ -1549,6 +1530,26 @@ void config_reload() {
                                  .max = 1,
                                  .help = "Automatically record demo files when connecting to a server",
                                  .name = "Auto Demo Recording",
+                         });
+
+        list_add(&config_settings,
+                         &(struct config_setting) {
+                                 .value = &settings_tmp.blood_marks,
+                                 .type = CONFIG_TYPE_INT,
+                                 .min = 0,
+                                 .max = 1,
+                                 .help = "Leaves persistent blood decals on surfaces near player hits",
+                                 .name = "Blood Marks",
+                         });
+
+        list_add(&config_settings,
+                         &(struct config_setting) {
+                                 .value = &settings_tmp.damage_numbers,
+                                 .type = CONFIG_TYPE_INT,
+                                 .min = 0,
+                                 .max = 1,
+                                 .help = "Shows floating damage numbers when you hit a player",
+                                 .name = "Damage Numbers",
                          });
 
         list_add(&config_settings,
@@ -1726,7 +1727,7 @@ void config_reload() {
                                  .min = 500,
                                  .max = 50000,
                                  .name = "Recording bitrate (kbps)",
-                                  .help = "Video bitrate in kbps. Higher = better quality, larger file",
+                                  .help = "Video bitrate in kilobits per second. Higher = better quality, larger file",
                                     .category = "Recording & Replay",
 
                         });
@@ -1757,7 +1758,7 @@ void config_reload() {
                                  .value = &settings_tmp.replay_save_hotkey,
                                  .type = CONFIG_TYPE_INT,
                                  .min = 0,
-                                 .max = 1000000000,
+                                 .max = INT_MAX,
                                  .name = "Replay Save Hotkey",
                                  .help = "Hotkey to save the current replay buffer",
                                    .category = "Recording & Replay",
@@ -1774,3 +1775,5 @@ void config_reload() {
                          });
 
 }
+
+

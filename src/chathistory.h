@@ -34,3 +34,5 @@ int  chathistory_count(void);
 const struct chathistory_line* chathistory_get(int i);
 
 #endif
+
+

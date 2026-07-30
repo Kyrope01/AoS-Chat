@@ -37,6 +37,8 @@
 #include "window.h"
 #include "particle.h"
 #include "hud.h"
+#include "bloodmarks.h"
+#include "damagenumbers.h"
 #include <math.h>
 #include "cameracontroller.h"
 static float os_sprint_state=0, os_sprint_smooth=0, os_raise_state=1, os_last_time=0, os_aim_state=0, os_aim_smooth=0;
@@ -541,10 +543,21 @@ void player_render_all() {
 						break;
 					case CAMERA_HITTYPE_PLAYER:
 						sound_create_sticky(&sound_spade_whack, players + k, k);
-						particle_create(0x0000FF, players[hit.player_id].physics.eye.x,
-										players[hit.player_id].physics.eye.y
-											+ player_section_height(hit.player_section),
-										players[hit.player_id].physics.eye.z, 3.5F, 1.0F, 8, 0.1F, 0.4F);
+						{
+							float hit_x = players[hit.player_id].physics.eye.x;
+							float hit_y = players[hit.player_id].physics.eye.y
+								+ player_section_height(hit.player_section);
+							float hit_z = players[hit.player_id].physics.eye.z;
+							particle_create(0x0000FF, hit_x, hit_y, hit_z, 3.5F, 1.0F, 8, 0.1F, 0.4F);
+
+							/* Melee blood: splash roughly along the attacker's
+							   facing direction, visible for any player's spade
+							   swing (matches the existing particle bleed effect,
+							   which also fires for non-local players). */
+							bloodmarks_spatter(hit_x, hit_y, hit_z, players[k].orientation.x * 6.0F,
+							                    players[k].orientation.y * 6.0F, players[k].orientation.z * 6.0F,
+							                    k == local_player_id);
+						}
 						if(k == local_player_id) {
 							struct PacketHit h;
 							h.player_id = hit.player_id;
@@ -624,17 +637,25 @@ void player_render_all() {
 					particle_create_casing(&players[k]);
 					switch(hit.type) {
 						case CAMERA_HITTYPE_PLAYER: {
-       if(k == local_player_id) {
-           if(hit.player_section == HITTYPE_HEAD) {
-               sound_create(SOUND_LOCAL, &sound_headshot, 0.0F, 0.0F, 0.0F);
-           } else {
-               sound_create(SOUND_LOCAL, &sound_hitbody, 0.0F, 0.0F, 0.0F);
-           }
-       }
-							particle_create(0x0000FF, players[hit.player_id].physics.eye.x,
-											players[hit.player_id].physics.eye.y
-												+ player_section_height(hit.player_section),
-											players[hit.player_id].physics.eye.z, 3.5F, 1.0F, 8, 0.1F, 0.4F);
+							if(k == local_player_id) {
+								if(hit.player_section == HITTYPE_HEAD) {
+									sound_create(SOUND_LOCAL, &sound_headshot, 0.0F, 0.0F, 0.0F);
+								} else {
+									sound_create(SOUND_LOCAL, &sound_hitbody, 0.0F, 0.0F, 0.0F);
+								}
+							}
+							float hit_x = players[hit.player_id].physics.eye.x;
+							float hit_y = players[hit.player_id].physics.eye.y
+								+ player_section_height(hit.player_section);
+							float hit_z = players[hit.player_id].physics.eye.z;
+							particle_create(0x0000FF, hit_x, hit_y, hit_z, 3.5F, 1.0F, 8, 0.1F, 0.4F);
+
+							/* Blood decal for shots fired by OTHER players too --
+							   purely visual, so it should appear regardless of
+							   who pulled the trigger. Damage numbers, however,
+							   are only shown for hits the local player lands
+							   (see the local-player firing path in weapon.c). */
+							bloodmarks_spatter(hit_x, hit_y, hit_z, o[0] * 12.0F, o[1] * 12.0F, o[2] * 12.0F, false);
 							break;
 						}
 						case CAMERA_HITTYPE_BLOCK:
@@ -1486,3 +1507,5 @@ int player_uncrouch(struct Player* p) {
 	player_coordsystem_adjust2(p);
 	return 0;
 }
+
+

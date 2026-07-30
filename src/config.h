@@ -76,8 +76,6 @@ extern struct RENDER_OPTIONS {
         float spectator_acceleration;
         float spectator_fog_distance;
         int iron_sight;
-        int damage_numbers;
-        float damage_number_size;
         int disable_raw_input;
         int ui_spacing;
         int ui_padding;
@@ -97,9 +95,11 @@ extern struct RENDER_OPTIONS {
         float rifle_ads_fov;
         float shotgun_ads_fov;
         float smg_ads_fov;
-        int disable_corpse_despawn;
-        int auto_demo_recording;
-        int player_stats;
+	int disable_corpse_despawn;
+	int auto_demo_recording;
+	int blood_marks;
+	int damage_numbers;
+	int player_stats;
         int player_technical_stats;
         int rain;
         int snow;
@@ -165,8 +165,8 @@ enum {
 struct config_setting {
         void* value;
         int type;
-        float min;
-        float max;
+        int min;
+        int max;
         char name[32];
         char help[64];
         char category[32];
@@ -187,3 +187,5 @@ void config_reload(void);
 void config_save(void);
 
 #endif
+
+

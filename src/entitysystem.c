@@ -67,3 +67,5 @@ void entitysys_add(struct entity_system* es, void* object) {
 
 	pthread_mutex_unlock(&es->lock);
 }
+
+

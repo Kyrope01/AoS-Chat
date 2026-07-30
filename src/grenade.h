@@ -22,6 +22,7 @@
 
 struct Grenade {
 	unsigned char team;
+	unsigned char owner_id; /* player who threw it; used for grenade damage-number attribution */
 	float fuse_length;
 	float created;
 	struct Position pos;
@@ -34,3 +35,5 @@ void grenade_update(float dt);
 void grenade_render(void);
 
 #endif
+
+

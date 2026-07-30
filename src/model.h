@@ -89,3 +89,5 @@ int model_total_voxels(void);
 extern float kv6_normals[256][3];
 
 #endif
+
+

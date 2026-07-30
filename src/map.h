@@ -71,3 +71,5 @@ int map_total_blocks(void);
 float map_sun_shadow(int x, int y, int z, int steps);
 
 #endif
+
+

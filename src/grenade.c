@@ -27,6 +27,10 @@
 #include "grenade.h"
 #include "map.h"
 #include "entitysystem.h"
+#include "player.h"
+#include "config.h"
+#include "bloodmarks.h"
+#include "damagenumbers.h"
 
 struct entity_system grenades;
 
@@ -161,6 +165,46 @@ bool grenade_update_single(void* obj, void* user) {
 		particle_create(grenade_inwater(g) ? map_get(g->pos.x, 0, g->pos.z) : 0x505050, g->pos.x, g->pos.y + 1.5F,
 						g->pos.z, 20.0F, 1.5F, 64, 0.1F, 0.5F);
 
+		/* Blood + damage numbers for anyone caught in the blast, client-side
+		   estimate only (server remains authoritative for actual HP). Only
+		   evaluated for the local player's own grenade so we don't spam
+		   decals/numbers for every explosion happening across the map. */
+		if((settings.blood_marks || settings.damage_numbers) && g->owner_id == local_player_id) {
+			for(int i = 0; i < PLAYERS_MAX; i++) {
+				if(i == g->owner_id || !players[i].connected || !players[i].alive
+				   || players[i].team == TEAM_SPECTATOR)
+					continue;
+				if(players[i].team == players[g->owner_id].team)
+					continue; /* no team-based grenade friendly-fire feedback */
+
+				float dx = players[i].physics.eye.x - g->pos.x;
+				float dy = players[i].physics.eye.y - g->pos.y;
+				float dz = players[i].physics.eye.z - g->pos.z;
+				float dist_sqr = dx * dx + dy * dy + dz * dz;
+
+				/* Classic AoS grenade damage falloff: damage = min(4096 / distSqr, 100)
+				   within a 16-block cube around the explosion. */
+				if(fabsf(dx) >= 16.0F || fabsf(dy) >= 16.0F || fabsf(dz) >= 16.0F)
+					continue;
+
+				int dmg = (dist_sqr < 0.01F) ? 100 : (int)fminf(ceilf(4096.0F / dist_sqr), 100.0F);
+				if(dmg <= 0)
+					continue;
+
+				if(settings.damage_numbers)
+					damagenumbers_add(i, dmg, players[i].physics.eye.x, players[i].physics.eye.y,
+					                   players[i].physics.eye.z);
+
+				if(settings.blood_marks) {
+					float len = len3D(dx, dy, dz);
+					if(len > 0.001F)
+						bloodmarks_spatter(players[i].physics.eye.x, players[i].physics.eye.y,
+						                    players[i].physics.eye.z, (dx / len) * 6.0F, (dy / len) * 6.0F,
+						                    (dz / len) * 6.0F, true);
+				}
+			}
+		}
+
 		return true;
 	} else {
 		if(grenade_move(g, dt) == 2)
@@ -173,3 +217,5 @@ bool grenade_update_single(void* obj, void* user) {
 void grenade_update(float dt) {
 	entitysys_iterate(&grenades, &dt, grenade_update_single);
 }
+
+

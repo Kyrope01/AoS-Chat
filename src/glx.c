@@ -857,3 +857,4 @@ void glx_disable_sphericalfog() {
 #endif
         glx_fog = 0;
 }
+
