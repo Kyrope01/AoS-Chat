@@ -133,8 +133,8 @@ static inline int ks_mkdir(const char* path, int mode) { return mkdir(path, mode
 #define chebyshev(dx, dy, dz)                                                                                          \
 	max(absf(dx), max(absf(dy), absf(dz)))
 #define angle3D(x1, y1, z1, x2, y2, z2) acos((x1) * (x2) + (y1) * (y2) + (z1) * (z2)) // vectors should be normalized
-#define len2D(x, y) sqrt(pow(x, 2) + pow(y, 2))
-#define len3D(x, y, z) sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2))
+#define len2D(x, y) sqrt((x) * (x) + (y) * (y))
+#define len3D(x, y, z) sqrt((x) * (x) + (y) * (y) + (z) * (z))
 
 #define rgba(r, g, b, a) (((int)(a) << 24) | ((int)(b) << 16) | ((int)(g) << 8) | (int)(r))
 #define rgb(r, g, b) (((b) << 16) | ((g) << 8) | (r))

@@ -60,6 +60,14 @@ static struct blood_mark marks[BLOODMARKS_MAX];
 static struct tesselator bloodmarks_tesselator;
 static bool bloodmarks_tesselator_ready = false;
 
+/* The mesh only actually needs to be rebuilt when a mark spawns or is
+   removed (marks never move or otherwise change their geometry once
+   placed). Everything else is static geometry, so re-tesselating all
+   active marks from scratch every single frame -- as the original
+   implementation did -- was pure wasted CPU on the common case where
+   nothing changed since the last frame. */
+static bool bloodmarks_dirty = true;
+
 static float bloodmarks_frand(void) {
 	/* ms_rand() returns a 15-bit value (0..32767) */
 	return (float)ms_rand() / 32767.0F;
@@ -67,6 +75,7 @@ static float bloodmarks_frand(void) {
 
 void bloodmarks_init(void) {
 	memset(marks, 0, sizeof(marks));
+	bloodmarks_dirty = true;
 	if(!bloodmarks_tesselator_ready) {
 		tesselator_create(&bloodmarks_tesselator, VERTEX_FLOAT, 0, 0);
 		bloodmarks_tesselator_ready = true;
@@ -76,6 +85,7 @@ void bloodmarks_init(void) {
 void bloodmarks_clear(void) {
 	for(int k = 0; k < BLOODMARKS_MAX; k++)
 		marks[k].active = false;
+	bloodmarks_dirty = true;
 }
 
 static bool bloodmarks_anchor_solid(const struct blood_mark* m) {
@@ -125,6 +135,8 @@ static void bloodmarks_spawn(int bx, int by, int bz, int axis, int dir, bool by_
 		m->blots[i].dv = (bloodmarks_frand() - 0.5F) * 0.22F;
 		m->blots[i].size = 0.045F + bloodmarks_frand() * 0.07F;
 	}
+
+	bloodmarks_dirty = true;
 }
 
 void bloodmarks_spatter(float x, float y, float z, float dirx, float diry, float dirz, bool by_local) {
@@ -214,15 +226,19 @@ void bloodmarks_update(float dt) {
 
 		if(m->fade > 0.0F) {
 			m->fade += dt / BLOODMARKS_FADE_TIME;
-			if(m->fade >= 1.0F)
+			if(m->fade >= 1.0F) {
 				m->active = false;
+				bloodmarks_dirty = true;
+			}
 			continue;
 		}
 
 		/* If the block this decal is glued to got destroyed, the surface no
 		   longer exists -- remove immediately rather than floating in air. */
-		if(!bloodmarks_anchor_solid(m))
+		if(!bloodmarks_anchor_solid(m)) {
 			m->active = false;
+			bloodmarks_dirty = true;
+		}
 	}
 }
 
@@ -263,45 +279,44 @@ void bloodmarks_render(void) {
 	if(!settings.blood_marks)
 		return;
 
-	bool any = false;
-	for(int k = 0; k < BLOODMARKS_MAX; k++) {
-		if(marks[k].active) {
-			any = true;
-			break;
+	if(bloodmarks_dirty) {
+		tesselator_clear(&bloodmarks_tesselator);
+
+		for(int k = 0; k < BLOODMARKS_MAX; k++) {
+			struct blood_mark* m = &marks[k];
+			if(!m->active)
+				continue;
+
+			float alpha = (1.0F - m->fade) * 0.85F;
+			if(alpha <= 0.01F)
+				continue;
+
+			/* Deep hemoglobin red, matching the tone used for the existing
+			   blood particle effect (0x0000FF packed as R=255 in this engine's
+			   byte order), just darker so it reads as a stain, not fresh spray. */
+			tesselator_set_color(&bloodmarks_tesselator, rgba(150, 14, 10, (int)(alpha * 255.0F)));
+
+			float fixed_coord = (float)((m->axis == 0) ? m->anchor_x : (m->axis == 1) ? m->anchor_y : m->anchor_z);
+			fixed_coord += (m->dir > 0) ? (1.0F + BLOODMARKS_SURFACE_OFFSET) : -BLOODMARKS_SURFACE_OFFSET;
+
+			for(int i = 0; i < BLOODMARKS_BLOTS; i++) {
+				float u = m->u + m->blots[i].du;
+				float v = m->v + m->blots[i].dv;
+				/* Keep each blot from spilling past the block's own face. */
+				u = fmaxf(0.05F, fminf(0.95F, u));
+				v = fmaxf(0.05F, fminf(0.95F, v));
+				bloodmarks_emit_blot(m->axis, fixed_coord, (float)m->anchor_x, (float)m->anchor_y,
+				                      (float)m->anchor_z, u, v, m->blots[i].size);
+			}
 		}
+
+		bloodmarks_dirty = false;
 	}
-	if(!any)
+
+	/* Nothing to draw -- either no marks were ever spawned, or the last
+	   rebuild produced an empty mesh (all marks evicted/destroyed). */
+	if(bloodmarks_tesselator.quad_count == 0)
 		return;
-
-	tesselator_clear(&bloodmarks_tesselator);
-
-	for(int k = 0; k < BLOODMARKS_MAX; k++) {
-		struct blood_mark* m = &marks[k];
-		if(!m->active)
-			continue;
-
-		float alpha = (1.0F - m->fade) * 0.85F;
-		if(alpha <= 0.01F)
-			continue;
-
-		/* Deep hemoglobin red, matching the tone used for the existing
-		   blood particle effect (0x0000FF packed as R=255 in this engine's
-		   byte order), just darker so it reads as a stain, not fresh spray. */
-		tesselator_set_color(&bloodmarks_tesselator, rgba(150, 14, 10, (int)(alpha * 255.0F)));
-
-		float fixed_coord = (float)((m->axis == 0) ? m->anchor_x : (m->axis == 1) ? m->anchor_y : m->anchor_z);
-		fixed_coord += (m->dir > 0) ? (1.0F + BLOODMARKS_SURFACE_OFFSET) : -BLOODMARKS_SURFACE_OFFSET;
-
-		for(int i = 0; i < BLOODMARKS_BLOTS; i++) {
-			float u = m->u + m->blots[i].du;
-			float v = m->v + m->blots[i].dv;
-			/* Keep each blot from spilling past the block's own face. */
-			u = fmaxf(0.05F, fminf(0.95F, u));
-			v = fmaxf(0.05F, fminf(0.95F, v));
-			bloodmarks_emit_blot(m->axis, fixed_coord, (float)m->anchor_x, (float)m->anchor_y, (float)m->anchor_z, u,
-			                      v, m->blots[i].size);
-		}
-	}
 
 	matrix_upload();
 	glEnable(GL_BLEND);

@@ -253,9 +253,13 @@ execute_process(
 include(CheckIPOSupported)
 check_ipo_supported(RESULT lto_supported OUTPUT error)
 
-if(lto_supported AND NOT ANDROID)
+# Only enable LTO for Release builds -- it meaningfully slows down
+# incremental Debug/RelWithDebInfo builds for no benefit during development.
+# Also gate on ANDROID exactly as before: the NDK toolchain's LTO support is
+# flaky across NDK versions and not worth the risk in the mobile build.
+if(lto_supported AND NOT ANDROID AND CMAKE_BUILD_TYPE STREQUAL "Release")
         message(STATUS "IPO / LTO enabled")
-        # set_property(TARGET ${KS_TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+        set_property(TARGET ${KS_TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
         message(STATUS "IPO / LTO not supported: <${error}>")
 endif()

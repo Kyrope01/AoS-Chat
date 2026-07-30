@@ -22,14 +22,25 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include <pthread.h>
 
+/* NOTE: entity_system is used exclusively from the main thread. Every
+   instance (particles, tracers, grenades, sound sources, falling-block
+   debris) is a file-local global that is never declared `extern` in a
+   header, so no other translation unit -- and in particular none of the
+   background worker threads (chunk generation, water reflection, map
+   collapse physics, chat history search, replay/recording encode) -- can
+   ever reach these entitysys_* calls. The pthread_mutex this struct used to
+   carry was therefore always uncontended dead weight: real, non-zero
+   lock/unlock overhead paid every single frame (once per entitysys_iterate
+   call and once per entitysys_add call, across 5+ systems) for
+   synchronization nothing ever needed. Removed. If a future change ever
+   does need to touch one of these systems from another thread, add locking
+   back at that call site (or reintroduce it here) at that point. */
 struct entity_system {
 	void* buffer;
 	size_t count;
 	size_t length;
 	size_t object_size;
-	pthread_mutex_t lock;
 };
 
 void entitysys_create(struct entity_system* es, size_t object_size, size_t initial_size);

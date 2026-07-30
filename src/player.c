@@ -58,9 +58,9 @@ static int player_is_obscured(struct Player* p) {
 
 // Check if a player is within frustum and render distance
 static int player_in_view(struct Player* p) {
-        return camera_CubeInFrustum(p->pos.x, p->pos.y, p->pos.z, 1.0F, 2.0F)
-               && distance2D(p->pos.x, p->pos.z, camera_x, camera_z)
-                       <= pow(settings.render_distance + 2.0F, 2.0F);
+	float rd = settings.render_distance + 2.0F;
+	return camera_CubeInFrustum(p->pos.x, p->pos.y, p->pos.z, 1.0F, 2.0F)
+	       && distance2D(p->pos.x, p->pos.z, camera_x, camera_z) <= rd * rd;
 }
 
 /* Check if a block position overlaps with the local player's AABB */
@@ -467,6 +467,14 @@ int player_intersection_choose(struct player_intersection* s, float* dist) {
 }
 
 void player_update(float dt, int locked) {
+	/* dt is identical for every player in this call, so the smoothing
+	   exponents below are loop-invariant -- compute them once instead of
+	   twice per axis (6 pow() calls) for every one of the up to 256
+	   player slots, every physics tick. Also use powf() (float) instead
+	   of pow() (double) since all operands here are float anyway. */
+	const float smooth_decay = powf(0.9F, dt * 60.0F);
+	const float smooth_gain = powf(0.1F, dt * 60.0F);
+
 	for(int k = 0; k < PLAYERS_MAX; k++) {
 		if(players[k].connected) {
 			if(locked) {
@@ -474,12 +482,12 @@ void player_update(float dt, int locked) {
 			} else {
 				if(k != local_player_id) {
 					// smooth out player orientation
-					players[k].orientation_smooth.x = players[k].orientation_smooth.x * pow(0.9F, dt * 60.0F)
-						+ players[k].orientation.x * pow(0.1F, dt * 60.0F);
-					players[k].orientation_smooth.y = players[k].orientation_smooth.y * pow(0.9F, dt * 60.0F)
-						+ players[k].orientation.y * pow(0.1F, dt * 60.0F);
-					players[k].orientation_smooth.z = players[k].orientation_smooth.z * pow(0.9F, dt * 60.0F)
-						+ players[k].orientation.z * pow(0.1F, dt * 60.0F);
+					players[k].orientation_smooth.x = players[k].orientation_smooth.x * smooth_decay
+						+ players[k].orientation.x * smooth_gain;
+					players[k].orientation_smooth.y = players[k].orientation_smooth.y * smooth_decay
+						+ players[k].orientation.y * smooth_gain;
+					players[k].orientation_smooth.z = players[k].orientation_smooth.z * smooth_decay
+						+ players[k].orientation.z * smooth_gain;
 				}
 			}
 		}
@@ -490,6 +498,12 @@ void player_update(float dt, int locked) {
 void player_render_all() {
 	player_intersection_type = -1;
 	player_intersection_dist = FLT_MAX;
+
+	/* Loop-invariant across all 256 player slots below -- hoisted out of
+	   the per-player branch it used to live in (was a pow() call inside
+	   the render loop, executed once per non-local connected player, every
+	   single frame). */
+	const float render_dist_sq = (settings.render_distance + 2.0F) * (settings.render_distance + 2.0F);
 
 	Ray ray;
 	ray.origin.x = camera_x;
@@ -600,7 +614,7 @@ void player_render_all() {
 			int should_render = (camera_mode == CAMERAMODE_SPECTATOR && settings.esp_in_spec)
 				|| (camera_CubeInFrustum(players[k].pos.x, players[k].pos.y, players[k].pos.z, 1.0F, 2.0F)
 					&& distance2D(players[k].pos.x, players[k].pos.z, camera_x, camera_z)
-						<= pow(settings.render_distance + 2.0F, 2.0F));
+						<= render_dist_sq);
 			
 			if(should_render) {
 				struct player_intersection intersects = {0};
@@ -761,7 +775,7 @@ void player_collision(const struct Player* p, Ray* ray, struct player_intersecti
 
 	float height = player_height(p) - 0.25F;
 
-	float len = sqrt(pow(p->orientation.x, 2.0F) + pow(p->orientation.z, 2.0F));
+	float len = sqrtf(p->orientation.x * p->orientation.x + p->orientation.z * p->orientation.z);
 	float fx = p->orientation.x / len;
 	float fy = p->orientation.z / len;
 
@@ -776,7 +790,8 @@ void player_collision(const struct Player* p, Ray* ray, struct player_intersecti
 
 	matrix_identity(matrix_model);
 	matrix_translate(matrix_model, p->physics.eye.x, p->physics.eye.y + height, p->physics.eye.z);
-	float head_scale = sqrt(pow(p->orientation.x, 2.0F) + pow(p->orientation.y, 2.0F) + pow(p->orientation.z, 2.0F));
+	float head_scale = sqrtf(p->orientation.x * p->orientation.x + p->orientation.y * p->orientation.y
+		+ p->orientation.z * p->orientation.z);
 	matrix_translate(matrix_model, 0.0F, box_head.pivot[2] * (head_scale * box_head.scale - box_head.scale), 0.0F);
 	matrix_scale3(matrix_model, head_scale);
 	matrix_pointAt(matrix_model, ox, oy, oz);
@@ -922,7 +937,7 @@ void player_render(struct Player* p, int id) {
 	if(id != local_player_id)
 		height -= 0.25F;
 
-	float len = sqrt(pow(p->orientation.x, 2.0F) + pow(p->orientation.z, 2.0F));
+	float len = sqrtf(p->orientation.x * p->orientation.x + p->orientation.z * p->orientation.z);
 	float fx = p->orientation.x / len;
 	float fy = p->orientation.z / len;
 
@@ -969,7 +984,8 @@ void player_render(struct Player* p, int id) {
 		matrix_push(matrix_model);
 		matrix_translate(matrix_model, p->physics.eye.x, p->physics.eye.y + height, p->physics.eye.z);
 		float head_scale
-			= sqrt(pow(p->orientation.x, 2.0F) + pow(p->orientation.y, 2.0F) + pow(p->orientation.z, 2.0F));
+			= sqrtf(p->orientation.x * p->orientation.x + p->orientation.y * p->orientation.y
+				+ p->orientation.z * p->orientation.z);
 		matrix_translate(matrix_model, 0.0F,
 						 model_playerhead.zpiv * (head_scale * model_playerhead.scale - model_playerhead.scale), 0.0F);
 		matrix_scale3(matrix_model, head_scale);
@@ -1399,7 +1415,7 @@ int player_move(struct Player* p, float fsynctics, int id) {
 	if((p->input.keys.up || p->input.keys.down) && (p->input.keys.left || p->input.keys.right))
 		f *= SQRT; // if strafe + forward/backwards then limit diagonal velocity
 
-	float len = sqrt(pow(p->orientation.x, 2.0F) + pow(p->orientation.y, 2.0F));
+	float len = sqrtf(p->orientation.x * p->orientation.x + p->orientation.y * p->orientation.y);
 	float sx = -p->orientation.y / len;
 	float sy = p->orientation.x / len;
 
@@ -1455,7 +1471,8 @@ int player_move(struct Player* p, float fsynctics, int id) {
 	if(p->input.keys.up || p->input.keys.down || p->input.keys.left || p->input.keys.right) {
 		if(game_time() - p->sound.feet_started > (p->input.keys.sprint ? (0.5F / 1.3F) : 0.5F)
 		   && (!p->input.keys.crouch && !p->input.keys.sneak) && !p->physics.airborne
-		   && pow(p->physics.velocity.x, 2.0F) + pow(p->physics.velocity.z, 2.0F) > pow(0.125F, 2.0F)) {
+		   && p->physics.velocity.x * p->physics.velocity.x + p->physics.velocity.z * p->physics.velocity.z
+		           > 0.125F * 0.125F) {
 			struct Sound_wav* footstep = (struct Sound_wav*[]) {
 				&sound_footstep1, &sound_footstep2, &sound_footstep3, &sound_footstep4,
 				&sound_wade1,	  &sound_wade2,		&sound_wade3,	  &sound_wade4,

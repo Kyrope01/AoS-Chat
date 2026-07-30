@@ -200,12 +200,15 @@ void cameracontroller_fps(float dt) {
 		players[local_player_id].input.buttons.packed = 0;
 	}
 
-	float lx = players[local_player_id].orientation_smooth.x * pow(0.7F, dt * 60.0F)
-		+ (sin(camera_rot_x) * sin(camera_rot_y)) * (1.0F - pow(0.7F, dt * 60.0F));
-	float ly = players[local_player_id].orientation_smooth.y * pow(0.7F, dt * 60.0F)
-		+ (cos(camera_rot_y)) * (1.0F - pow(0.7F, dt * 60.0F));
-	float lz = players[local_player_id].orientation_smooth.z * pow(0.7F, dt * 60.0F)
-		+ (cos(camera_rot_x) * sin(camera_rot_y)) * (1.0F - pow(0.7F, dt * 60.0F));
+	float smooth_decay = powf(0.7F, dt * 60.0F);
+	float smooth_gain = 1.0F - smooth_decay;
+
+	float lx = players[local_player_id].orientation_smooth.x * smooth_decay
+		+ (sin(camera_rot_x) * sin(camera_rot_y)) * smooth_gain;
+	float ly = players[local_player_id].orientation_smooth.y * smooth_decay
+		+ (cos(camera_rot_y)) * smooth_gain;
+	float lz = players[local_player_id].orientation_smooth.z * smooth_decay
+		+ (cos(camera_rot_x) * sin(camera_rot_y)) * smooth_gain;
 
 	players[local_player_id].orientation_smooth.x = lx;
 	players[local_player_id].orientation_smooth.y = ly;

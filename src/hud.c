@@ -661,9 +661,10 @@ static void hud_ingame_render3D() {
                 }
                 if(gamestate.gamemode_type == GAMEMODE_TC) {
                         for(int k = 0; k < gamestate.gamemode.tc.territory_count; k++) {
-                                float l = pow(gamestate.gamemode.tc.territory[k].x - players[local_player_id].pos.x, 2.0F)
-                                        + pow((63.0F - gamestate.gamemode.tc.territory[k].z) - players[local_player_id].pos.y, 2.0F)
-                                        + pow(gamestate.gamemode.tc.territory[k].y - players[local_player_id].pos.z, 2.0F);
+                                float dtx = gamestate.gamemode.tc.territory[k].x - players[local_player_id].pos.x;
+                                float dty = (63.0F - gamestate.gamemode.tc.territory[k].z) - players[local_player_id].pos.y;
+                                float dtz = gamestate.gamemode.tc.territory[k].y - players[local_player_id].pos.z;
+                                float l = dtx * dtx + dty * dty + dtz * dtz;
                                 if(l <= 20.0F * 20.0F) {
                                         rotating_model = &model_tent;
                                         rotating_model_team = gamestate.gamemode.tc.territory[k].team;
@@ -2044,14 +2045,11 @@ static void hud_ingame_render(mu_Context* ctx, float scalex, float scalef) {
                                                                   + 0.05F * gamestate.progressbar.rate * (window_time() - gamestate.progressbar.update),
                                                           1.0F),
                                                   0.0F);
-                        float l
-                                = pow(gamestate.gamemode.tc.territory[gamestate.progressbar.tent].x - players[local_player_id].pos.x,
-                                          2.0F)
-                                + pow((63.0F - gamestate.gamemode.tc.territory[gamestate.progressbar.tent].z)
-                                                  - players[local_player_id].pos.y,
-                                          2.0F)
-                                + pow(gamestate.gamemode.tc.territory[gamestate.progressbar.tent].y - players[local_player_id].pos.z,
-                                          2.0F);
+                        float pbx = gamestate.gamemode.tc.territory[gamestate.progressbar.tent].x - players[local_player_id].pos.x;
+                        float pby = (63.0F - gamestate.gamemode.tc.territory[gamestate.progressbar.tent].z)
+                                - players[local_player_id].pos.y;
+                        float pbz = gamestate.gamemode.tc.territory[gamestate.progressbar.tent].y - players[local_player_id].pos.z;
+                        float l = pbx * pbx + pby * pby + pbz * pbz;
                         if(p < 1.0F && l < 20.0F * 20.0F) {
                                 switch(gamestate.gamemode.tc.territory[gamestate.progressbar.tent].team) {
                                         case TEAM_1: glColor3ub(gamestate.team_1.red, gamestate.team_1.green, gamestate.team_1.blue); break;
@@ -3690,7 +3688,7 @@ static void hud_ingame_touch(void* finger, int action, float x, float y, float d
                 }
                 if((camera_mode == CAMERAMODE_FPS || camera_mode == CAMERAMODE_SPECTATOR)
                    && distance2D(f->start.x, f->start.y, settings.window_height * 0.3F, settings.window_height * 0.7F)
-                           < pow(settings.window_height * 0.15F, 2)) {
+                           < (settings.window_height * 0.15F) * (settings.window_height * 0.15F)) {
                         float mx = max(min(x - settings.window_height * 0.3F, settings.window_height * 0.2F),
                                                    -settings.window_height * 0.2F);
                         float my = max(min(y - settings.window_height * 0.7F, settings.window_height * 0.2F),
