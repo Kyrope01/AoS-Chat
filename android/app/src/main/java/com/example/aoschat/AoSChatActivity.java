@@ -1,4 +1,3 @@
-
 package com.example.aoschat;
 
 import org.libsdl.app.SDLActivity;
@@ -52,6 +51,29 @@ public class AoSChatActivity extends SDLActivity {
                 activity.setRequestedOrientation(locked
                     ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                     : ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR);
+            }
+        });
+    }
+
+    /* Called from native (window.c) to switch the activity orientation.
+       mode: 0 = portrait, 1 = landscape, 2 = follow device sensor (auto).
+       AoS Chat locks landscape while the spectator camera is active and
+       returns to portrait in the full chat, so the on-screen keyboard never
+       covers the chat input. Runs on the UI thread (orientation changes must). */
+    public static void setScreenOrientation(final int mode) {
+        final SDLActivity activity = mSingleton;
+        if (activity == null)
+            return;
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                int o;
+                switch (mode) {
+                    case 1:  o = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE; break;
+                    case 2:  o = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR; break;
+                    default: o = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT; break;
+                }
+                activity.setRequestedOrientation(o);
             }
         });
     }
