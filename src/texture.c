@@ -1,4 +1,3 @@
-
 /*
         Copyright (c) 2017-2020 ByteBit
 
@@ -613,5 +612,3 @@ void texture_init() {
 
         texture_create_buffer(&texture_dummy, 1, 1, (unsigned char[]) {0, 0, 0, 0}, 1);
 }
-
-

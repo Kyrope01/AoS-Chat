@@ -1,4 +1,3 @@
-
 /*
  * Asynchronous loader for previous-session chat replayed from log files.
  * Reads up to 30 days of history per call, filtered to the currently
@@ -35,5 +34,3 @@ int  chathistory_count(void);
 const struct chathistory_line* chathistory_get(int i);
 
 #endif
-
-

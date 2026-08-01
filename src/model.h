@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -90,5 +89,3 @@ int model_total_voxels(void);
 extern float kv6_normals[256][3];
 
 #endif
-
-

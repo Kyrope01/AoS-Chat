@@ -1,4 +1,3 @@
-
 #include "gles_immediate_stubs.h"
 /*
         Copyright (c) 2017-2020 ByteBit
@@ -86,6 +85,10 @@ static int aoschat_spectator_menu = 0;
 static int aoschat_playerlist_open = 0;
 static int aoschat_selected_player = -1;
 static char aoschat_input[256] = "";
+/* microui id of the full-chat text box (cached each frame). Used to detect
+   whether it holds focus so the input bar can be lifted to the top of the
+   screen while typing — otherwise the on-screen keyboard covers it. */
+static unsigned int aoschat_input_id = 0;
 /* Declared with the core app state because mobile touch handling appears
    earlier in this translation unit than the fullscreen-chat renderer. */
 static mu_Rect aoschat_spec_menu_rect;
@@ -3865,7 +3868,10 @@ static void hud_ingame_touch(void* finger, int action, float x, float y, float d
         }
         overlay_down_finger = NULL;
 
-        if(action != TOUCH_MOVE) {
+        /* In AoS Chat spectator mode the only on-screen control is the joystick;
+           skip the (invisible) top-row / LMB-RMB / Cam / Crouch-Jump hit zones
+           so they can't swallow touches meant for camera look. */
+        if(!aoschat_spectator_active && action != TOUCH_MOVE) {
                 int k = 0;
                 while(hud_ingame_onscreencontrol(k, NULL, -1)) {
                         if(is_inside_centered(f->start.x, settings.window_height - f->start.y,
@@ -4319,6 +4325,8 @@ static void aoschat_enter_spectator(int player_id) {
         camera_mode = CAMERAMODE_SPECTATOR;
         screen_current = SCREEN_NONE;
         cameracontroller_reset_spectator_velocity();
+        /* Spectator camera is landscape; full chat stays portrait. */
+        window_set_orientation(1);
         if(player_id >= 0 && player_id < PLAYERS_MAX && players[player_id].connected
            && players[player_id].team != TEAM_SPECTATOR) {
                 cameracontroller_bodyview_player = player_id;
@@ -4338,6 +4346,9 @@ static void hud_aoschat_init(void) {
         aoschat_input[0] = 0;
         chat_input_mode = CHAT_NO_INPUT;
         window_mousemode(WINDOW_CURSOR_ENABLED);
+        /* Back in full chat: restore portrait (clears the spectator landscape
+           override, falling back to the portrait-lock setting). */
+        window_set_orientation(-1);
 }
 
 static void aoschat_render_player_window(mu_Context* ctx) {
@@ -4412,6 +4423,22 @@ static void hud_aoschat_render(mu_Context* ctx, float scalex, float scaley) {
                 int input_h = ctx->style->size.y + ctx->style->padding * 2;
                 int messages_h = settings.window_height - input_h * (portrait ? 4 : 3);
                 if(messages_h < input_h * 3) messages_h = input_h * 3;
+                int input_w = max(40, settings.window_width - bw - gap * 3);
+                /* When the chat box holds focus the soft keyboard is up, so lift
+                   the input bar above the Messages panel — otherwise the keyboard
+                   covers it. Focus is read from the previous frame (cached id). */
+                int input_focused = (aoschat_input_id != 0 && ctx->focus == aoschat_input_id);
+
+                if(input_focused) {
+                        mu_layout_row(ctx, 2, (int[]){input_w, bw}, 0);
+                        int submit = hud_textbox(ctx, aoschat_input, sizeof(aoschat_input), 0) & MU_RES_SUBMIT;
+                        aoschat_input_id = ctx->last_id;
+                        if(mu_button(ctx, "Send") || submit) {
+                                aoschat_send_message(aoschat_input);
+                                aoschat_input[0] = 0;
+                        }
+                }
+
                 mu_layout_row(ctx, 1, (int[]){-1}, messages_h);
                 mu_begin_panel_ex(ctx, "Messages", MU_OPT_NOHSCROLL);
                 if(session_log_count > 0) {
@@ -4443,12 +4470,14 @@ static void hud_aoschat_render(mu_Context* ctx, float scalex, float scaley) {
                                 + ctx->style->padding * 2 - messages->body.h);
                 }
 
-                int input_w = max(40, settings.window_width - bw - gap * 3);
-                mu_layout_row(ctx, 2, (int[]){input_w, bw}, 0);
-                int submit = hud_textbox(ctx, aoschat_input, sizeof(aoschat_input), 0) & MU_RES_SUBMIT;
-                if(mu_button(ctx, "Send") || submit) {
-                        aoschat_send_message(aoschat_input);
-                        aoschat_input[0] = 0;
+                if(!input_focused) {
+                        mu_layout_row(ctx, 2, (int[]){input_w, bw}, 0);
+                        int submit = hud_textbox(ctx, aoschat_input, sizeof(aoschat_input), 0) & MU_RES_SUBMIT;
+                        aoschat_input_id = ctx->last_id;
+                        if(mu_button(ctx, "Send") || submit) {
+                                aoschat_send_message(aoschat_input);
+                                aoschat_input[0] = 0;
+                        }
                 }
                 mu_end_window(ctx);
         }
@@ -4559,21 +4588,8 @@ static void aoschat_spectator_render_2d(float scalef) {
         texture_draw_rotated(&texture_ui_knob, hud_ingame_touch_x + settings.window_height * 0.3F,
                              hud_ingame_touch_y + settings.window_height * 0.3F,
                              settings.window_height * 0.1F, settings.window_height * 0.1F, 0.0F);
-        char ctl[32];
-        if(hud_ingame_onscreencontrol(67, ctl, -1)) {
-                texture_draw_rotated(&texture_ui_input, settings.window_height * 0.195F,
-                                     settings.window_height * 0.08F, settings.window_height * 0.15F,
-                                     settings.window_height * 0.1F, 0.0F);
-                font_centered(settings.window_height * 0.195F, settings.window_height * 0.10F,
-                              settings.window_height * 0.04F, ctl);
-        }
-        if(hud_ingame_onscreencontrol(66, ctl, -1)) {
-                texture_draw_rotated(&texture_ui_input, settings.window_height * 0.405F,
-                                     settings.window_height * 0.08F, settings.window_height * 0.15F,
-                                     settings.window_height * 0.1F, 0.0F);
-                font_centered(settings.window_height * 0.405F, settings.window_height * 0.10F,
-                              settings.window_height * 0.04F, ctl);
-        }
+        /* Only the joystick is shown in spectator mode now — the Crouch/Jump
+           plates below the stick were removed on request. */
 #endif
         float ui = hud_ui_scale();
         int bw = (int)(110 * ui), bh = (int)(32 * ui);
@@ -4776,6 +4792,9 @@ static void hud_serverlist_init() {
         window_title(NULL);
         rpc_seti(RPC_VALUE_SLOTS, 0);
         show_exit = 0;
+        /* Leaving an in-game screen: make sure we are back in portrait (clears
+           the spectator landscape override in case of disconnect). */
+        window_set_orientation(-1);
 
         window_mousemode(WINDOW_CURSOR_ENABLED);
 
@@ -6990,5 +7009,3 @@ void hud_common_render_for_chatlog(mu_Context* ctx) {
 void hud_common_sidebar_for_chatlog(mu_Context* ctx, float scalex, float scaley) {
         hud_common_sidebar(ctx, scalex, scaley);
 }
-
-

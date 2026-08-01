@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -27,5 +26,3 @@
 #include <stdint.h>
 
 #include "http.h"
-
-

@@ -1,4 +1,3 @@
-
 /*
         Copyright (c) 2017-2020 ByteBit
 
@@ -1539,5 +1538,3 @@ void network_init() {
         packets[PACKET_EXTINFO_ID] = read_PacketExtInfo;
         packets[PACKET_EXT_BASE + EXT_PLAYER_PROPERTIES] = read_PacketPlayerProperties;
 }
-
-

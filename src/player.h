@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -206,5 +205,3 @@ void player_update_corpses(float dt);
 void player_render_corpses(void);
 
 #endif
-
-

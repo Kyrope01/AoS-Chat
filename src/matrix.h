@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -46,5 +45,3 @@ void matrix_upload_p(void);
 void matrix_pointAt(mat4 m, float dx, float dy, float dz);
 
 #endif
-
-

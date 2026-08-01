@@ -1,4 +1,3 @@
-
 #ifndef SKINS_H
 #define SKINS_H
 
@@ -57,5 +56,3 @@ void skins_apply_all(int models);
 void skins_render_preview(enum skin_category_type category, int entry, float cx, float cy, float size);
 
 #endif
-
-

@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -34,5 +33,3 @@ void ht_iterate_remove(HashTable* ht, void* user, bool (*callback)(void* key, vo
 bool ht_iterate(HashTable* ht, void* user, bool (*callback)(void* key, void* value, void* user));
 
 #endif
-
-

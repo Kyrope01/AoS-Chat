@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -141,5 +140,3 @@ struct minheap_block* minheap_put(struct minheap* h, struct minheap_block* b) {
 
 	return h->nodes + k;
 }
-
-

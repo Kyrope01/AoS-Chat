@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -41,5 +40,3 @@ void tracer_render(void);
 void tracer_init(void);
 
 #endif
-
-

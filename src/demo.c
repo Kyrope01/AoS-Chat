@@ -1,4 +1,3 @@
-
 /*
     Demo recording and playback for AoSChat.  See demo.h for the design
     overview.  Recording is unchanged from the original; playback is adapted
@@ -620,5 +619,3 @@ void demo_playback_set_speed(float speed) {
     if (speed > 8.0f)  speed = 8.0f;
     DemoPlaybackState.speed = speed;
 }
-
-

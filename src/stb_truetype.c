@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -22,5 +21,3 @@
 #define STBTT_RASTERIZER_VERSION 1
 
 #include "stb_truetype.h"
-
-

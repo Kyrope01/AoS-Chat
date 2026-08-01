@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -82,5 +81,3 @@ int glx_default_shader_program(void);
 #endif
 
 #endif
-
-

@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -313,5 +312,3 @@ void chathistory_poll(void) {
 	worker_done = 0;
 	pthread_mutex_unlock(&public_lock);
 }
-
-

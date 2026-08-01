@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -199,5 +198,3 @@ int ms_rand(void);
 	}
 
 #endif
-
-

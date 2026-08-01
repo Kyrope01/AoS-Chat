@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -197,5 +196,3 @@ void ping_start(void (*result)(void*, float, char*)) {
 void ping_stop() {
 	channel_clear(&ping_queue);
 }
-
-

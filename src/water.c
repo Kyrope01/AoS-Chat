@@ -1,4 +1,3 @@
-
 /*
         Copyright (c) 2017-2020 ByteBit
 
@@ -540,5 +539,3 @@ void water_render(void) {
         matrix_pop(matrix_model);
         matrix_upload();
 }
-
-

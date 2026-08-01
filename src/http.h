@@ -1,4 +1,3 @@
-
 /*
 ------------------------------------------------------------------------------
           Licensing information can be found at the end of the file.
@@ -719,5 +718,3 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ------------------------------------------------------------------------------
 */
-
-

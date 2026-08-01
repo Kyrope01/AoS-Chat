@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -201,5 +200,3 @@ void channel_clear(struct channel* ch) {
 	pthread_cond_signal(&ch->signal);
 	pthread_mutex_unlock(&ch->lock);
 }
-
-

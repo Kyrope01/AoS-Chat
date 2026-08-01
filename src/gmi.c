@@ -1,4 +1,3 @@
-
 // #include "network.h"
 #include <stdlib.h>
 #include <ctype.h>
@@ -45,4 +44,3 @@ end:
 void gmi_parse_tdm(char* message) {
 
 }
-

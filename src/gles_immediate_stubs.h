@@ -1,4 +1,3 @@
-
 #pragma once
 /*
  * gles_immediate_stubs.h  —  Android / OpenGL ES constant defines
@@ -28,5 +27,3 @@ extern int gles_version;
 #endif
 
 #endif /* OPENGL_ES */
-
-

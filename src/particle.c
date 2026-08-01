@@ -1,4 +1,3 @@
-
 /*
         Copyright (c) 2017-2020 ByteBit
 
@@ -520,5 +519,3 @@ void particle_create_snow(void) {
                 particle_stats_total_created++;
         }
 }
-
-

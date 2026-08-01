@@ -1,4 +1,3 @@
-
 include(FetchContent)
 
 FetchContent_Declare(
@@ -549,5 +548,3 @@ if(NOT ANDROID)
 
         INCLUDE(CPack)
 endif()
-
-

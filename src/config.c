@@ -1,4 +1,3 @@
-
 /*
         Copyright (c) 2017-2020 ByteBit
 
@@ -1862,5 +1861,3 @@ void config_reload() {
         settings.rain = 0;
         settings.snow = 0;
 }
-
-

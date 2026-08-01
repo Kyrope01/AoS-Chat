@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -183,6 +182,12 @@ void window_swapping(int value);
 void window_init(void);
 void window_fromsettings(void);
 void window_apply(void);
+/* Runtime orientation override (Android). mode:
+   -1 = clear override, follow the portrait-lock setting again
+    0 = portrait, 1 = landscape, 2 = follow device sensor.
+   No-op on non-Android. AoS Chat forces landscape while the spectator
+   camera is active and restores portrait in full chat. */
+void window_set_orientation(int mode);
 void window_deinit(void);
 void window_update(void);
 int window_closed(void);

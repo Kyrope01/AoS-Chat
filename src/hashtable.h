@@ -1,4 +1,3 @@
-
 #ifndef HASHTABLE_H
 #define HASHTABLE_H
 
@@ -110,5 +109,3 @@ int _ht_resize(HashTable* table, size_t new_capacity);
 void _ht_rehash(HashTable* table, HTNode** old, size_t old_capacity);
 
 #endif /* HASHTABLE_H */
-
-

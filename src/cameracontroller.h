@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -47,5 +46,3 @@ void cameracontroller_selection_render(void);
 void cameracontroller_death_render(void);
 
 #endif
-
-

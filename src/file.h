@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -37,5 +36,3 @@ unsigned char buffer_read8(unsigned char* buffer, int index);
 void file_url(char* url);
 
 #endif
-
-

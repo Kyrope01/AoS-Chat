@@ -1,4 +1,3 @@
-
 /*
 ** Copyright (c) 2020 rxi
 **
@@ -313,5 +312,3 @@ void mu_begin_panel_ex(mu_Context *ctx, const char *name, int opt);
 void mu_end_panel(mu_Context *ctx);
 
 #endif
-
-

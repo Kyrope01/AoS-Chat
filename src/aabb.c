@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -114,5 +113,3 @@ bool aabb_intersection_terrain(AABB* a, int miny) {
 
 	return false;
 }
-
-

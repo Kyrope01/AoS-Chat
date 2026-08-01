@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -141,7 +140,9 @@ static int window_pending_apply = 0;
 static int pending_multisamples;
 static int pending_vsync;
 static int pending_fullscreen;
-static int pending_android_lock_portrait;
+/* When >= 0 this overrides the portrait-lock setting for the current screen
+   (e.g. spectator mode forces landscape). -1 means "use the setting". */
+static int window_orientation_override = -1;
 static int pending_width;
 static int pending_height;
 /* Last known non-fullscreen window size (points), used to return to the
@@ -410,7 +411,6 @@ void window_fromsettings() {
 	pending_multisamples = settings.multisamples;
 	pending_vsync = settings.vsync;
 	pending_fullscreen = settings.fullscreen;
-	pending_android_lock_portrait = settings.android_lock_portrait;
 	pending_width = settings.window_width;
 	pending_height = settings.window_height;
 	window_pending_apply = 1;
@@ -530,7 +530,6 @@ void window_fromsettings() {
 	pending_multisamples = settings.multisamples;
 	pending_vsync = settings.vsync;
 	pending_fullscreen = settings.fullscreen;
-	pending_android_lock_portrait = settings.android_lock_portrait;
 	pending_width = settings.window_width;
 	pending_height = settings.window_height;
 	window_pending_apply = 1;
@@ -555,19 +554,45 @@ static void android_set_status_bar_hidden(int hidden) {
 	(*env)->DeleteLocalRef(env, activity);
 }
 
-static void android_set_portrait_lock(int locked) {
+/* mode: 0 = portrait, 1 = landscape, 2 = follow device sensor. Maps to the
+   ActivityInfo orientation constants in Java (setScreenOrientation) so the
+   native side never hardcodes Android int values. */
+static void android_set_orientation_mode(int mode) {
 	JNIEnv* env = (JNIEnv*)SDL_AndroidGetJNIEnv();
 	jobject activity = (jobject)SDL_AndroidGetActivity();
 	if(!env || !activity) return;
 	jclass cls = (*env)->GetObjectClass(env, activity);
-	jmethodID mid = (*env)->GetStaticMethodID(env, cls, "setPortraitLock", "(Z)V");
+	jmethodID mid = (*env)->GetStaticMethodID(env, cls, "setScreenOrientation", "(I)V");
 	if(mid)
-		(*env)->CallStaticVoidMethod(env, cls, mid, (jboolean)(locked ? 1 : 0));
+		(*env)->CallStaticVoidMethod(env, cls, mid, (jint)mode);
 	if((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
 	(*env)->DeleteLocalRef(env, cls);
 	(*env)->DeleteLocalRef(env, activity);
 }
 #endif
+
+/* Resolve the desired Android orientation: the runtime override wins when set
+   (spectator = landscape), otherwise the portrait-lock setting decides. Applies
+   both the SDL orientations hint and the native setRequestedOrientation call. */
+static void apply_android_orientation(void) {
+#ifdef __ANDROID__
+	int m = (window_orientation_override >= 0)
+		? window_orientation_override
+		: (settings.android_lock_portrait ? 0 : 2);
+	SDL_SetHint(SDL_HINT_ORIENTATIONS,
+		m == 1 ? "LandscapeLeft LandscapeRight"
+		: m == 2 ? "Portrait PortraitUpsideDown LandscapeLeft LandscapeRight"
+		: "Portrait");
+	android_set_orientation_mode(m);
+#else
+	(void)0;
+#endif
+}
+
+void window_set_orientation(int mode) {
+	window_orientation_override = mode;
+	apply_android_orientation();
+}
 
 void window_share_file(const char* path) {
 #ifdef __ANDROID__
@@ -601,10 +626,7 @@ void window_apply() {
 		window_swapping(0);
 
 #ifdef __ANDROID__
-	SDL_SetHint(SDL_HINT_ORIENTATIONS, pending_android_lock_portrait
-		? "Portrait"
-		: "Portrait PortraitUpsideDown LandscapeLeft LandscapeRight");
-	android_set_portrait_lock(pending_android_lock_portrait);
+	apply_android_orientation();
 #endif
 
 	if(pending_fullscreen) {
@@ -753,9 +775,7 @@ void window_init() {
 	   every device orientation and let Android autorotate normally. iOS keeps
 	   the orientations declared by its Info.plist. */
 #ifdef __ANDROID__
-	SDL_SetHint(SDL_HINT_ORIENTATIONS, settings.android_lock_portrait
-		? "Portrait"
-		: "Portrait PortraitUpsideDown LandscapeLeft LandscapeRight");
+	apply_android_orientation();
 #else
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
@@ -1304,5 +1324,3 @@ int window_cpucores() {
 #endif
 return 1;
 }
-
-

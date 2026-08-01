@@ -1,4 +1,3 @@
-
 /*
         Copyright (c) 2017-2020 ByteBit
 
@@ -193,5 +192,3 @@ void config_reload(void);
 void config_save(void);
 
 #endif
-
-

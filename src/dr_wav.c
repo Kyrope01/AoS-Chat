@@ -1,4 +1,3 @@
-
 // WAV audio loader and writer. Public domain. See "unlicense" statement at the end of this file.
 // dr_wav - v0.8.1 - 2018-06-29
 //
@@ -3723,5 +3722,3 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 For more information, please refer to <http://unlicense.org/>
 */
-
-

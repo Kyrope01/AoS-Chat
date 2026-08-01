@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -158,5 +157,3 @@ void matrix_upload_p() {
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixf((float*)matrix_projection);
 }
-
-

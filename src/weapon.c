@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -390,5 +389,3 @@ void weapon_shoot() {
 				 players[local_player_id].pos.y, players[local_player_id].pos.z);
 	particle_create_casing(&players[local_player_id]);
 }
-
-

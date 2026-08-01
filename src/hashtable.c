@@ -1,4 +1,3 @@
-
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -438,5 +437,3 @@ void _ht_rehash(HashTable* table, HTNode** old, size_t old_capacity) {
 		}
 	}
 }
-
-

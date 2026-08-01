@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -218,5 +217,3 @@ bool grenade_update_single(void* obj, void* user) {
 void grenade_update(float dt) {
 	entitysys_iterate(&grenades, &dt, grenade_update_single);
 }
-
-

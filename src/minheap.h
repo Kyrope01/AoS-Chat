@@ -1,4 +1,3 @@
-
 /*
 	Copyright (c) 2017-2020 ByteBit
 
@@ -52,5 +51,3 @@ void minheap_set(struct minheap* h, struct minheap_block* b, int value);
 struct minheap_block* minheap_put(struct minheap* h, struct minheap_block* b);
 
 #endif
-
-
