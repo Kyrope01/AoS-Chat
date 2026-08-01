@@ -4657,6 +4657,13 @@ static int aoschat_hit(mu_Rect r, double x, double y) {
         return r.w > 0 && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
 }
 
+/* True while the spectator Menu or Player list overlay is open. While it is,
+   the whole screen belongs to those buttons — window.c must not grab the tap as
+   camera-look (which swallowed the lower dropdown items). */
+int aoschat_spec_overlay_open(void) {
+        return aoschat_spectator_menu || aoschat_playerlist_open;
+}
+
 static int aoschat_spectator_keyboard(int key, int action, int mods, int internal) {
         (void)mods; (void)internal;
         if(action != WINDOW_PRESS) return 0;

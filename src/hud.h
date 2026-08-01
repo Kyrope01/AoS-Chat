@@ -82,6 +82,9 @@ int hud_accent_blue(void);
 void hud_init();
 void hud_ime_update();
 void hud_mousemode(int mode);
+/* True while the spectator overlay (Menu / Player list) is open. window.c uses
+   this to stop those taps being captured as camera-look. */
+int aoschat_spec_overlay_open(void);
 int hud_accent_color();
 void hud_common_sidebar(mu_Context* ctx, float scalex, float scaley);
 

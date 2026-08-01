@@ -905,6 +905,11 @@ static struct window_finger* aim_finger = NULL;
 static struct window_finger* aim_finger2 = NULL;
 
 static int window_aim_zone(float x, float y) {
+	/* When the spectator overlay (Menu / Player list) is open the whole screen
+	   belongs to those buttons: taps must reach hud_ingame_touch, not be grabbed
+	   as camera-look (which otherwise ate the lower dropdown items). */
+	if(aoschat_spec_overlay_open())
+		return 0;
 	/* Exclude the right-side action buttons — but only the ROWS they actually
 	   occupy, not the whole right column. The old full-height strip meant you
 	   could never start a camera drag from the lower-right corner (e.g. with a
