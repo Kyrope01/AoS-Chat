@@ -151,6 +151,22 @@ static int pending_height;
 static int windowed_width = 0;
 static int windowed_height = 0;
 
+#ifdef __ANDROID__
+/* Defined later inside the SDL backend section (where the JNI helpers live). */
+static void apply_android_orientation(void);
+#endif
+
+/* Runtime orientation override. -1 = follow the portrait-lock setting,
+   0 = portrait, 1 = landscape, 2 = auto. Defined once here (outside the
+   GLFW/SDL backend split) so it links on every backend; the actual rotation
+   only happens on Android. */
+void window_set_orientation(int mode) {
+	window_orientation_override = mode;
+#ifdef __ANDROID__
+	apply_android_orientation();
+#endif
+}
+
 #ifdef USE_GLFW
 
 static bool joystick_available = false;
@@ -587,11 +603,6 @@ static void apply_android_orientation(void) {
 #else
 	(void)0;
 #endif
-}
-
-void window_set_orientation(int mode) {
-	window_orientation_override = mode;
-	apply_android_orientation();
 }
 
 void window_share_file(const char* path) {
