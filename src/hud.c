@@ -4229,78 +4229,100 @@ static void aoschat_mu_outlined(mu_Context* ctx, const char* text, int len,
         mu_draw_text(ctx, ctx->style->font, text, len, pos, color);
 }
 
-static void aoschat_render_message_row(mu_Context* ctx, const char* raw, unsigned int team_color) {
+static int aoschat_time_close(time_t a, time_t b) {
+        return a > 0 && b > 0 && labs((long)(b - a)) <= 300;
+}
+
+/* Renders one chat line in the full-chat Messages panel.
+   - player_message: has a sender (avatar/name/timestamp) vs a system notice
+   - show_header:    first line of a group -> draw the avatar chip + name + time
+   - draw_separator: last line of a group -> draw a subtle divider after it
+   Replaces the old highlighted cards: the name now sits on its own header line,
+   consecutive lines from the same sender are grouped, and groups are separated
+   by a thin line instead of a box, so the chat reads lighter and less crowded. */
+static void aoschat_draw_message(mu_Context* ctx, int player_message,
+                                 const char* name, const char* body,
+                                 unsigned int team_color, time_t stamp,
+                                 int show_header, int draw_separator) {
         int th = ctx->text_height(ctx->style->font);
-        char prefix[32], name[32], body[256];
-        int player_message = aoschat_split_player_message(raw, prefix, sizeof(prefix),
-                                                          name, sizeof(name), body, sizeof(body));
-        int header_w = 0;
-        if(player_message) {
-                header_w = ctx->text_width(ctx->style->font, prefix, 0)
-                        + ctx->text_width(ctx->style->font, name, 0)
-                        + ctx->text_width(ctx->style->font, ": ", 0);
-        }
-        int available = max(20, mu_get_current_container(ctx)->body.w
-                                  - ctx->style->padding * 2);
-        int body_start_line = 0;
-        int first_body_width = available;
-        if(player_message) {
-                first_body_width = available - header_w;
-                /* If less than a short word fits after the name, begin the body
-                   on the next line instead of producing a tiny fragment. */
-                if(first_body_width < ctx->text_width(ctx->style->font, "word", 0)) {
-                        body_start_line = 1;
-                        first_body_width = available;
-                }
-        }
+        int pad = ctx->style->padding;
 
+        int content_w = max(20, mu_get_current_container(ctx)->body.w - pad * 2);
+        int chip = th;                              /* avatar square: one line tall */
+        int chip_gap = max(4, pad);                 /* gap between chip and text */
+        int indent = player_message ? (chip + chip_gap) : 0;  /* body indented under name */
+
+        int body_w = content_w - indent;
         struct aoschat_wrapped_line wrapped[32];
-        int body_lines = body[0]
-                ? aoschat_wrap_lines(ctx, body, first_body_width, available, wrapped, 32)
-                : 0;
-        int total_lines;
-        if(player_message)
-                total_lines = max(1, body_start_line + body_lines);
-        else
-                total_lines = max(1, body_lines);
+        int body_lines = (body && body[0])
+                ? aoschat_wrap_lines(ctx, body, body_w, body_w, wrapped, 32) : 0;
+        if(body_lines < 1) body_lines = 1;
 
-        int row_h = th * total_lines + ctx->style->padding * 2;
+        int header_lines = (player_message && show_header) ? 1 : 0;
+        int top_pad = (player_message && !show_header) ? max(1, pad / 3) : pad;
+        /* Real gap below the text before the divider, so the separator line never
+           touches the message. */
+        int bot_pad = draw_separator ? (th / 2 + 2) : 1;
+        int row_h = top_pad + (header_lines + body_lines) * th + bot_pad;
+
         mu_layout_row(ctx, 1, (int[]){-1}, row_h);
         mu_Rect row = mu_layout_next(ctx);
 
-        /* Player messages use persistent cards so adjacent conversations stay
-           distinct. Server/system notices remain unboxed and visually lighter. */
-        if(player_message) {
-                int hover = mu_mouse_over(ctx, row);
-                int div = hover ? 4 : 8;
-                mu_draw_rect(ctx, row, mu_color(hud_accent_red() / div,
-                                               hud_accent_green() / div,
-                                               hud_accent_blue() / div, 220));
-                mu_draw_box(ctx, row, mu_color(hover ? hud_accent_red() : hud_accent_red() / 2,
-                                              hover ? hud_accent_green() : hud_accent_green() / 2,
-                                              hover ? hud_accent_blue() : hud_accent_blue() / 2, 255));
-        }
-
-        int left = row.x + ctx->style->padding;
-        int y = row.y + ctx->style->padding;
+        int left = row.x + pad;
+        int y = row.y + top_pad;
         mu_Color white = mu_color(235, 235, 235, 255);
+
         if(player_message) {
-                int x = left;
-                aoschat_mu_outlined(ctx, prefix, -1, mu_vec2(x, y), white);
-                x += ctx->text_width(ctx->style->font, prefix, 0);
-                unsigned int name_color = aoschat_player_name_color(name, team_color);
-                mu_Color nc = mu_color(red(name_color), green(name_color), blue(name_color), 255);
-                aoschat_mu_outlined(ctx, name, -1, mu_vec2(x, y), nc);
-                x += ctx->text_width(ctx->style->font, name, 0);
-                aoschat_mu_outlined(ctx, ": ", -1, mu_vec2(x, y), white);
+                unsigned int nc = aoschat_player_name_color(name, team_color);
+                int bx = left + indent;
+                if(show_header) {
+                        /* Avatar chip: team-coloured square with the sender's initial. */
+                        int cx = left, cy = y;
+                        mu_draw_rect(ctx, mu_rect(cx, cy, chip, chip),
+                                mu_color(red(nc) / 2, green(nc) / 2, blue(nc) / 2, 235));
+                        char initial[5] = {0};
+                        if(name[0]) {
+                                int cl = aoschat_utf8_next(name, 0, (int)strlen(name));
+                                if(cl > 4) cl = 4;
+                                memcpy(initial, name, cl); initial[cl] = 0;
+                        }
+                        int iw = ctx->text_width(ctx->style->font, initial, 0);
+                        aoschat_mu_outlined(ctx, initial, -1,
+                                mu_vec2(cx + (chip - iw) / 2, cy + (chip - th) / 2), white);
+                        /* Sender name in team colour. */
+                        mu_Color namecol = mu_color(red(nc), green(nc), blue(nc), 255);
+                        int nx = left + chip + chip_gap;
+                        aoschat_mu_outlined(ctx, name, -1, mu_vec2(nx, y), namecol);
+                        nx += ctx->text_width(ctx->style->font, name, 0);
+                        /* Timestamp, muted, after the name. */
+                        if(stamp > 0) {
+                                struct tm* tm = localtime(&stamp);
+                                if(tm) {
+                                        char ts[8];
+                                        snprintf(ts, sizeof(ts), "%02d:%02d", tm->tm_hour, tm->tm_min);
+                                        mu_Color muted = mu_color(150, 150, 155, 255);
+                                        aoschat_mu_outlined(ctx, ts, -1, mu_vec2(nx + chip_gap, y), muted);
+                                }
+                        }
+                        y += th;   /* body begins on the next line */
+                }
+                for(int line = 0; line < body_lines; line++)
+                        aoschat_mu_outlined(ctx, body + wrapped[line].start, wrapped[line].length,
+                                            mu_vec2(bx, y + line * th), white);
+        } else {
+                /* System / server notice: muted warm tint, full width, no chip. */
+                mu_Color sys = mu_color(190, 185, 140, 255);
+                for(int line = 0; line < body_lines; line++)
+                        aoschat_mu_outlined(ctx, body + wrapped[line].start, wrapped[line].length,
+                                            mu_vec2(left, y + line * th), sys);
         }
 
-        for(int line = 0; line < body_lines; line++) {
-                int output_line = body_start_line + line;
-                int x = (player_message && output_line == 0) ? left + header_w : left;
-                aoschat_mu_outlined(ctx, body + wrapped[line].start,
-                                    wrapped[line].length,
-                                    mu_vec2(x, y + output_line * th), white);
+        if(draw_separator) {
+                /* Sit the divider at the very bottom of the row, with the bot_pad gap
+                   keeping it clear of the message text above it. */
+                int sy = row.y + row_h - 1;
+                mu_draw_rect(ctx, mu_rect(left, sy, content_w, 1),
+                        mu_color(255, 255, 255, 26));
         }
 }
 
@@ -4443,16 +4465,40 @@ static void hud_aoschat_render(mu_Context* ctx, float scalex, float scaley) {
                 mu_begin_panel_ex(ctx, "Messages", MU_OPT_NOHSCROLL);
                 if(session_log_count > 0) {
                         int first = max(0, session_log_count - 300);
-                        for(int i = first; i < session_log_count; i++)
-                                aoschat_render_message_row(ctx, session_log_raw[i], session_log_color[i]);
+                        /* Parse the first line, then stream: each pass peeks the next line
+                           to decide grouping, so every line is parsed exactly once. */
+                        char prefix[32], name[32], body[256];
+                        int pm = aoschat_split_player_message(session_log_raw[first], prefix, sizeof(prefix),
+                                                              name, sizeof(name), body, sizeof(body));
+                        time_t st = session_log_time[first];
+                        int carried = 0; /* previous line's same_next == this line's same_prev */
+                        for(int i = first; i < session_log_count; i++) {
+                                char n_prefix[32], n_name[32], n_body[256];
+                                int n_pm = 0; time_t n_st = 0;
+                                if(i + 1 < session_log_count) {
+                                        n_pm = aoschat_split_player_message(session_log_raw[i + 1], n_prefix, sizeof(n_prefix),
+                                                                            n_name, sizeof(n_name), n_body, sizeof(n_body));
+                                        n_st = session_log_time[i + 1];
+                                }
+                                int same_next = pm && n_pm && !strcmp(name, n_name) && aoschat_time_close(st, n_st);
+                                aoschat_draw_message(ctx, pm, name, body, session_log_color[i], st, !carried, !same_next);
+                                carried = same_next;
+                                pm = n_pm; st = n_st;
+                                memcpy(name, n_name, sizeof(name));
+                                memcpy(body, n_body, sizeof(body));
+                        }
                 } else {
                         /* Some custom servers populate the live ring through
                            compatibility paths that do not append the session log.
                            Fall back to that ring so Full Chat can never appear empty
                            while Quick Chat already has messages. */
-                        for(int i = 127; i >= 1; i--)
-                                if(chat[0][i][0])
-                                        aoschat_render_message_row(ctx, chat[0][i], chat_color[0][i]);
+                        for(int i = 127; i >= 1; i--) {
+                                if(!chat[0][i][0]) continue;
+                                char fb_prefix[32], fb_name[32], fb_body[256];
+                                int fb_pm = aoschat_split_player_message(chat[0][i], fb_prefix, sizeof(fb_prefix),
+                                                                          fb_name, sizeof(fb_name), fb_body, sizeof(fb_body));
+                                aoschat_draw_message(ctx, fb_pm, fb_name, fb_body, chat_color[0][i], 0, 1, 1);
+                        }
                 }
                 mu_text_color_default(ctx);
                 mu_Container* messages = mu_get_current_container(ctx);

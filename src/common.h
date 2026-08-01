@@ -177,8 +177,12 @@ const char* reason_disconnect(int code);
    Holds the full current connection session, unlike chat[0][] which is
    capped at 127 slots. Reset on chat_clear(0). */
 #define SESSION_LOG_MAX 4096
+#include <time.h>
 extern char         session_log_raw[SESSION_LOG_MAX][256];
 extern unsigned int session_log_color[SESSION_LOG_MAX];
+/* Wall-clock time (time()) each session-log line was received, so the chat view
+   can show a per-message timestamp and group rapid same-sender bursts. 0 = none. */
+extern time_t       session_log_time[SESSION_LOG_MAX];
 extern int          session_log_count;
 
 #define SCREEN_NONE 0

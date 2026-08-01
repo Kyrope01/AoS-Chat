@@ -130,6 +130,7 @@ float chat_timer[3][128];
 unsigned int chat_history_pos;
 char         session_log_raw[SESSION_LOG_MAX][256];
 unsigned int session_log_color[SESSION_LOG_MAX];
+time_t       session_log_time[SESSION_LOG_MAX];
 int          session_log_count = 0;
 
 static void chat_push_one(int channel, unsigned int color, const char* msg) {
@@ -166,12 +167,15 @@ void chat_add(int channel, unsigned int color, const char* msg) {
                                                         (SESSION_LOG_MAX - 1) * sizeof(session_log_raw[0]));
                                         memmove(session_log_color, session_log_color + 1,
                                                         (SESSION_LOG_MAX - 1) * sizeof(session_log_color[0]));
+                                        memmove(session_log_time, session_log_time + 1,
+                                        		(SESSION_LOG_MAX - 1) * sizeof(session_log_time[0]));
                                         session_log_count = SESSION_LOG_MAX - 1;
                                 }
                                 strncpy(session_log_raw[session_log_count], buf,
                                                 sizeof(session_log_raw[0]) - 1);
                                 session_log_raw[session_log_count][sizeof(session_log_raw[0]) - 1] = 0;
                                 session_log_color[session_log_count] = color;
+                                session_log_time[session_log_count] = time(NULL);
                                 session_log_count++;
                         }
                         if(i == total_len) {
@@ -201,12 +205,15 @@ void chat_add(int channel, unsigned int color, const char* msg) {
                                                 (SESSION_LOG_MAX - 1) * sizeof(session_log_raw[0]));
                                 memmove(session_log_color, session_log_color + 1,
                                                 (SESSION_LOG_MAX - 1) * sizeof(session_log_color[0]));
+                                memmove(session_log_time, session_log_time + 1,
+                                		(SESSION_LOG_MAX - 1) * sizeof(session_log_time[0]));
                                 session_log_count = SESSION_LOG_MAX - 1;
                         }
                         strncpy(session_log_raw[session_log_count], buf,
                                         sizeof(session_log_raw[0]) - 1);
                         session_log_raw[session_log_count][sizeof(session_log_raw[0]) - 1] = 0;
                         session_log_color[session_log_count] = color;
+                        session_log_time[session_log_count] = time(NULL);
                         session_log_count++;
                 }
         }
